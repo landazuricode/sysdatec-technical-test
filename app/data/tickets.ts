@@ -1,10 +1,19 @@
 import {
+  ClassificationStatus,
   TicketStatus,
+  type TicketCategory,
+  type TicketPriority,
   type TicketStatus as TicketStatusType,
 } from "../../generated/prisma/enums";
 import type { TicketModel } from "../../generated/prisma/models/Ticket";
 import { db } from "./database";
 import { getErrorMessage, type DataResult } from "./result";
+
+export type TicketClassificationInput = {
+  category: TicketCategory;
+  priority: TicketPriority;
+  summary: string;
+};
 
 export type CreateTicketInput = {
   clientName: string;
@@ -141,6 +150,73 @@ export async function createTicket(
         clientName: input.clientName.trim(),
         requestText: input.requestText.trim(),
         attachmentUrl: input.attachmentUrl?.trim() || null,
+      },
+    });
+    return { ok: true, data: ticket };
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error),
+      code: "DATABASE",
+    };
+  }
+}
+
+export async function saveTicketClassification(
+  id: string,
+  classification: TicketClassificationInput,
+): Promise<DataResult<TicketModel>> {
+  try {
+    const existing = await db.ticket.findUnique({ where: { id } });
+    if (!existing) {
+      return {
+        ok: false,
+        error: "Ticket no encontrado",
+        code: "NOT_FOUND",
+      };
+    }
+
+    const ticket = await db.ticket.update({
+      where: { id },
+      data: {
+        category: classification.category,
+        priority: classification.priority,
+        summary: classification.summary.trim(),
+        classificationStatus: ClassificationStatus.COMPLETADA,
+        classificationError: null,
+        classifiedAt: new Date(),
+      },
+    });
+    return { ok: true, data: ticket };
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error),
+      code: "DATABASE",
+    };
+  }
+}
+
+export async function markTicketClassificationFailed(
+  id: string,
+  errorMessage: string,
+): Promise<DataResult<TicketModel>> {
+  try {
+    const existing = await db.ticket.findUnique({ where: { id } });
+    if (!existing) {
+      return {
+        ok: false,
+        error: "Ticket no encontrado",
+        code: "NOT_FOUND",
+      };
+    }
+
+    const ticket = await db.ticket.update({
+      where: { id },
+      data: {
+        classificationStatus: ClassificationStatus.FALLIDA,
+        classificationError: errorMessage,
+        classifiedAt: new Date(),
       },
     });
     return { ok: true, data: ticket };

@@ -2,6 +2,7 @@ import { Form, redirect, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/tickets.new";
 import { APP_NAME } from "~/config/constants";
 import { createTicket } from "~/data/tickets";
+import { runTicketClassification } from "~/services/ai/run-ticket-classification";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -12,11 +13,14 @@ export function meta({}: Route.MetaArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
+  const clientName = String(formData.get("clientName") ?? "");
+  const requestText = String(formData.get("requestText") ?? "");
+  const attachmentUrl = String(formData.get("attachmentUrl") ?? "") || null;
 
   const result = await createTicket({
-    clientName: String(formData.get("clientName") ?? ""),
-    requestText: String(formData.get("requestText") ?? ""),
-    attachmentUrl: String(formData.get("attachmentUrl") ?? "") || null,
+    clientName,
+    requestText,
+    attachmentUrl,
   });
 
   if (!result.ok) {
@@ -24,13 +28,11 @@ export async function action({ request }: Route.ActionArgs) {
       ok: false as const,
       error: result.error,
       code: result.code,
-      values: {
-        clientName: String(formData.get("clientName") ?? ""),
-        requestText: String(formData.get("requestText") ?? ""),
-        attachmentUrl: String(formData.get("attachmentUrl") ?? ""),
-      },
+      values: { clientName, requestText, attachmentUrl: attachmentUrl ?? "" },
     };
   }
+
+  await runTicketClassification(result.data.id, { clientName, requestText });
 
   return redirect(`/tickets/${result.data.id}`);
 }
@@ -45,7 +47,7 @@ export default function TicketsNewRoute() {
       <h2 className="text-lg font-semibold">Crear ticket</h2>
       <p className="mt-2 text-sm text-muted-foreground">
         Registra una solicitud con el nombre del cliente, el detalle y un adjunto
-        opcional.
+        opcional. La IA clasificará automáticamente categoría, prioridad y resumen.
       </p>
 
       {actionData && !actionData.ok && (
@@ -105,7 +107,7 @@ export default function TicketsNewRoute() {
           disabled={isSubmitting}
           className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-60 sm:w-auto"
         >
-          {isSubmitting ? "Creando..." : "Crear ticket"}
+          {isSubmitting ? "Creando y clasificando..." : "Crear ticket"}
         </button>
       </Form>
     </div>

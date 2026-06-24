@@ -25,6 +25,7 @@ services:
     environment:
       DATABASE_URL: postgresql://sysdatec:sysdatec@db:5432/tickets
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       NODE_ENV: production
     depends_on:
       db:

@@ -1,4 +1,5 @@
 import {
+  ClassificationStatus,
   TicketCategory,
   TicketPriority,
   TicketStatus,
@@ -31,6 +32,15 @@ export const ticketPriorityLabels: Record<
   ALTA: "Alta",
   MEDIA: "Media",
   BAJA: "Baja",
+};
+
+export const classificationStatusLabels: Record<
+  (typeof ClassificationStatus)[keyof typeof ClassificationStatus],
+  string
+> = {
+  PENDIENTE: "Pendiente",
+  COMPLETADA: "Completada",
+  FALLIDA: "Fallida",
 };
 
 export const ticketStatusOptions = Object.values(TicketStatus).map((value) => ({

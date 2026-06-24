@@ -1,12 +1,15 @@
 import { Form, useActionData, useNavigation } from "react-router";
+import { Sparkles } from "lucide-react";
 import type { Route } from "./+types/tickets.$ticketId";
 import { APP_NAME } from "~/config/constants";
 import {
+  classificationStatusLabels,
   ticketCategoryLabels,
   ticketPriorityLabels,
   ticketStatusLabels,
   ticketStatusOptions,
 } from "~/config/ticket-labels";
+import { ClassificationStatus } from "../../generated/prisma/enums";
 import { addComment } from "~/data/comments";
 import { serializeTicket } from "~/data/serializers";
 import {
@@ -14,6 +17,7 @@ import {
   updateTicketAssignee,
   updateTicketStatus,
 } from "~/data/tickets";
+import { runTicketClassification } from "~/services/ai/run-ticket-classification";
 
 export function meta({ loaderData }: Route.MetaArgs) {
   const title = loaderData?.ticket
@@ -83,6 +87,25 @@ export async function action({ request, params }: Route.ActionArgs) {
     return { ok: true as const, intent };
   }
 
+  if (intent === "retryClassification") {
+    const ticketResult = await getTicketById(params.ticketId);
+
+    if (!ticketResult.ok) {
+      return { ok: false as const, error: ticketResult.error, intent };
+    }
+
+    const classifyResult = await runTicketClassification(params.ticketId, {
+      clientName: ticketResult.data.clientName,
+      requestText: ticketResult.data.requestText,
+    });
+
+    if (!classifyResult.ok) {
+      return { ok: false as const, error: classifyResult.error, intent };
+    }
+
+    return { ok: true as const, intent };
+  }
+
   return {
     ok: false as const,
     error: "Acción no reconocida",
@@ -102,6 +125,9 @@ export default function TicketDetailRoute({ loaderData }: Route.ComponentProps) 
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const canRetryClassification =
+    ticket.classificationStatus === ClassificationStatus.FALLIDA ||
+    ticket.classificationStatus === ClassificationStatus.PENDIENTE;
 
   return (
     <div className="space-y-6">
@@ -110,6 +136,14 @@ export default function TicketDetailRoute({ loaderData }: Route.ComponentProps) 
         <h2 className="mt-1 text-2xl font-semibold">{ticket.clientName}</h2>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Clasificación IA
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {classificationStatusLabels[ticket.classificationStatus]}
+            </dd>
+          </div>
           <div>
             <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Estado
@@ -175,6 +209,32 @@ export default function TicketDetailRoute({ loaderData }: Route.ComponentProps) 
                 {ticket.summary}
               </p>
             </div>
+          )}
+
+          {ticket.classificationStatus === ClassificationStatus.FALLIDA &&
+            ticket.classificationError && (
+              <div className="rounded-lg border border-accent-danger/30 bg-accent-danger-subtle px-4 py-3">
+                <h3 className="text-sm font-medium text-accent-danger">
+                  Error de clasificación
+                </h3>
+                <p className="mt-1 text-sm text-accent-danger/90">
+                  {ticket.classificationError}
+                </p>
+              </div>
+            )}
+
+          {canRetryClassification && (
+            <Form method="post">
+              <input type="hidden" name="intent" value="retryClassification" />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors hover:bg-primary-subtle disabled:opacity-60"
+              >
+                <Sparkles className="h-4 w-4" />
+                {isSubmitting ? "Clasificando..." : "Reintentar clasificación IA"}
+              </button>
+            </Form>
           )}
 
           {ticket.attachmentUrl && (
