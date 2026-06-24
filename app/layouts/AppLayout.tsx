@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, useLoaderData } from "react-router";
 import { Sidebar } from "../components/layout/Sidebar";
 import { TopBar } from "../components/layout/TopBar";
+import { PagePreloader } from "../components/layout/PagePreloader";
 import { UserNameModal } from "../components/layout/UserNameModal";
 import { useUserName } from "~/hooks/useUserName";
 import { getSidebarFilterCounts, type SidebarFilterCounts } from "~/data/tickets";
@@ -29,6 +30,7 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      {!isReady && <PagePreloader />}
       {isReady && !userName && <UserNameModal onSubmit={setUserName} />}
 
       {isMobileSidebarOpen && (

@@ -27,6 +27,11 @@
   --color-accent-danger-subtle: #fef2f2;
   --color-accent-violet: #7c3aed;
   --color-accent-violet-subtle: #f5f3ff;
+
+  --animate-modal-backdrop-in: modal-backdrop-in 200ms ease-out both;
+  --animate-modal-dialog-in: modal-dialog-in 280ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
+  --animate-modal-backdrop-out: modal-backdrop-out 200ms ease-in both;
+  --animate-modal-dialog-out: modal-dialog-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
 html,
@@ -104,4 +109,57 @@ html.dark {
 
 button {
   @apply cursor-pointer;
+}
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modal-backdrop-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-dialog-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-modal-backdrop-in,
+  .animate-modal-dialog-in,
+  .animate-modal-backdrop-out,
+  .animate-modal-dialog-out {
+    animation: none;
+  }
 }
