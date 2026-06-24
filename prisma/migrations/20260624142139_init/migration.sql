@@ -1,29 +1,44 @@
+-- CreateEnum
+CREATE TYPE "TicketCategory" AS ENUM ('FINANZAS', 'LEGAL', 'COMPRAS', 'OPERACIONES');
+
+-- CreateEnum
+CREATE TYPE "TicketPriority" AS ENUM ('ALTA', 'MEDIA', 'BAJA');
+
+-- CreateEnum
+CREATE TYPE "TicketStatus" AS ENUM ('ABIERTO', 'EN_PROGRESO', 'RESUELTO', 'CERRADO');
+
+-- CreateEnum
+CREATE TYPE "ClassificationStatus" AS ENUM ('PENDIENTE', 'COMPLETADA', 'FALLIDA');
+
 -- CreateTable
 CREATE TABLE "Ticket" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "clientName" TEXT NOT NULL,
     "requestText" TEXT NOT NULL,
     "attachmentUrl" TEXT,
-    "category" TEXT,
-    "priority" TEXT,
+    "category" "TicketCategory",
+    "priority" "TicketPriority",
     "summary" TEXT,
-    "classificationStatus" TEXT NOT NULL DEFAULT 'PENDIENTE',
+    "classificationStatus" "ClassificationStatus" NOT NULL DEFAULT 'PENDIENTE',
     "classificationError" TEXT,
-    "classifiedAt" DATETIME,
-    "status" TEXT NOT NULL DEFAULT 'ABIERTO',
+    "classifiedAt" TIMESTAMP(3),
+    "status" "TicketStatus" NOT NULL DEFAULT 'ABIERTO',
     "assignee" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Ticket_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Comment" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "ticketId" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "author" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "Comment_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "Ticket" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Comment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -40,3 +55,6 @@ CREATE INDEX "Ticket_createdAt_idx" ON "Ticket"("createdAt");
 
 -- CreateIndex
 CREATE INDEX "Comment_ticketId_idx" ON "Comment"("ticketId");
+
+-- AddForeignKey
+ALTER TABLE "Comment" ADD CONSTRAINT "Comment_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "Ticket"("id") ON DELETE CASCADE ON UPDATE CASCADE;
