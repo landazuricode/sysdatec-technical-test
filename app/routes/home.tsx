@@ -1,13 +1,14 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import { TicketDashboard } from "../components/tickets/TicketDashboard";
+import { APP_DESCRIPTION, APP_NAME } from "~/config/constants";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: `Panel de control | ${APP_NAME}` },
+    { name: "description", content: APP_DESCRIPTION },
   ];
 }
 
 export default function Home() {
-  return <Welcome />;
+  return <TicketDashboard />;
 }
