@@ -6,6 +6,7 @@ import {
   Inbox,
   Search,
   Ticket,
+  X,
 } from "lucide-react";
 import {
   ticketCategoryLabels,
@@ -14,11 +15,17 @@ import {
 } from "~/config/ticket-labels";
 import type { SerializedTicket } from "~/data/serializers";
 import type { TicketStats } from "~/data/tickets";
+import {
+  STATUS_FILTER_RESUELTOS,
+  buildTicketListUrl,
+  hasActiveListFilters,
+  type TicketListFilters,
+} from "~/utils/ticket-filters";
 
 type TicketDashboardProps = {
   tickets: SerializedTicket[];
   stats: TicketStats;
-  search: string;
+  filters: TicketListFilters;
 };
 
 function formatDate(iso: string) {
@@ -28,7 +35,42 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
-export function TicketDashboard({ tickets, stats, search }: TicketDashboardProps) {
+function getFilterChips(filters: TicketListFilters) {
+  const chips: { key: keyof TicketListFilters; label: string }[] = [];
+
+  if (filters.search) {
+    chips.push({ key: "search", label: `Búsqueda: "${filters.search}"` });
+  }
+
+  if (filters.status) {
+    const statusLabel =
+      filters.status === STATUS_FILTER_RESUELTOS
+        ? "Resueltos"
+        : ticketStatusLabels[filters.status as keyof typeof ticketStatusLabels];
+    chips.push({ key: "status", label: `Estado: ${statusLabel}` });
+  }
+
+  if (filters.priority) {
+    chips.push({
+      key: "priority",
+      label: `Prioridad: ${ticketPriorityLabels[filters.priority]}`,
+    });
+  }
+
+  if (filters.category) {
+    chips.push({
+      key: "category",
+      label: `Categoría: ${ticketCategoryLabels[filters.category]}`,
+    });
+  }
+
+  return chips;
+}
+
+export function TicketDashboard({ tickets, stats, filters }: TicketDashboardProps) {
+  const filterChips = getFilterChips(filters);
+  const hasFilters = hasActiveListFilters(filters);
+
   const dashboardStats = [
     {
       label: "Total tickets",
@@ -74,23 +116,72 @@ export function TicketDashboard({ tickets, stats, search }: TicketDashboardProps
     success: "border-l-accent-success",
   } as const;
 
+  const searchParams = new URLSearchParams();
+  if (filters.search) searchParams.set("q", filters.search);
+  if (filters.status) searchParams.set("status", filters.status);
+  if (filters.priority) searchParams.set("priority", filters.priority);
+  if (filters.category) searchParams.set("category", filters.category);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Resumen de tickets</h2>
+          {hasFilters && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mostrando {tickets.length} resultado{tickets.length === 1 ? "" : "s"}{" "}
+              filtrado{tickets.length === 1 ? "" : "s"}
+            </p>
+          )}
         </div>
         <Form method="get" className="relative w-full sm:max-w-xs">
+          {filters.status && (
+            <input type="hidden" name="status" value={filters.status} />
+          )}
+          {filters.priority && (
+            <input type="hidden" name="priority" value={filters.priority} />
+          )}
+          {filters.category && (
+            <input type="hidden" name="category" value={filters.category} />
+          )}
           <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
             name="q"
-            defaultValue={search}
+            defaultValue={filters.search ?? ""}
             placeholder="Buscar ticket..."
             className="w-full rounded-lg border border-border bg-surface py-2.5 pr-3 pl-10 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground"
           />
         </Form>
       </div>
+
+      {filterChips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {filterChips.map((chip) => {
+            const paramKey =
+              chip.key === "search"
+                ? "q"
+                : (chip.key as "status" | "priority" | "category");
+
+            return (
+              <Link
+                key={chip.key}
+                to={buildTicketListUrl(searchParams, { [paramKey]: null })}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium transition-colors hover:bg-primary-subtle"
+              >
+                {chip.label}
+                <X className="h-3 w-3 text-muted-foreground" />
+              </Link>
+            );
+          })}
+          <Link
+            to="/"
+            className="text-xs font-medium text-muted-foreground underline-offset-2 hover:underline"
+          >
+            Limpiar filtros
+          </Link>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {dashboardStats.map((stat) => {
@@ -128,7 +219,9 @@ export function TicketDashboard({ tickets, stats, search }: TicketDashboardProps
       <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold">Tickets recientes</h3>
+            <h3 className="text-lg font-semibold">
+              {hasFilters ? "Tickets filtrados" : "Tickets recientes"}
+            </h3>
           </div>
           <Link
             to="/tickets/new"
@@ -142,14 +235,21 @@ export function TicketDashboard({ tickets, stats, search }: TicketDashboardProps
         {tickets.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-primary-subtle/40 px-6 py-14 text-center">
             <h4 className="text-base font-semibold">
-              {search ? "Sin resultados" : "Aún no hay tickets"}
+              {hasFilters ? "Sin resultados" : "Aún no hay tickets"}
             </h4>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              {search
-                ? "Prueba con otro término de búsqueda."
+              {hasFilters
+                ? "No hay tickets que coincidan con los filtros seleccionados."
                 : "Crea el primer ticket para empezar a trabajar."}
             </p>
-            {!search && (
+            {hasFilters ? (
+              <Link
+                to="/"
+                className="mt-6 inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors hover:bg-primary-subtle"
+              >
+                Limpiar filtros
+              </Link>
+            ) : (
               <Link
                 to="/tickets/new"
                 className="mt-6 inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors hover:bg-primary-subtle"

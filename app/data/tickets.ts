@@ -1,17 +1,21 @@
 import {
   ClassificationStatus,
+  TicketCategory,
+  TicketPriority,
   TicketStatus,
-  type TicketCategory,
-  type TicketPriority,
+  type TicketCategory as TicketCategoryType,
+  type TicketPriority as TicketPriorityType,
   type TicketStatus as TicketStatusType,
 } from "../../generated/prisma/enums";
+import type { Prisma } from "../../generated/prisma/client";
 import type { TicketModel } from "../../generated/prisma/models/Ticket";
+import { STATUS_FILTER_RESUELTOS, type TicketListFilters } from "~/utils/ticket-filters";
 import { db } from "./database";
 import { getErrorMessage, type DataResult } from "./result";
 
 export type TicketClassificationInput = {
-  category: TicketCategory;
-  priority: TicketPriority;
+  category: TicketCategoryType;
+  priority: TicketPriorityType;
   summary: string;
 };
 
@@ -26,6 +30,26 @@ export type TicketStats = {
   nuevos: number;
   enProgreso: number;
   resueltos: number;
+};
+
+export type SidebarFilterCounts = {
+  status: {
+    todos: number;
+    abiertos: number;
+    enProgreso: number;
+    resueltos: number;
+  };
+  priority: {
+    alta: number;
+    media: number;
+    baja: number;
+  };
+  category: {
+    finanzas: number;
+    legal: number;
+    compras: number;
+    operaciones: number;
+  };
 };
 
 export type TicketWithComments = TicketModel & {
@@ -53,23 +77,103 @@ function isTicketStatus(value: string): value is TicketStatusType {
   return Object.values(TicketStatus).includes(value as TicketStatusType);
 }
 
+function buildListTicketsWhere(
+  filters?: TicketListFilters,
+): Prisma.TicketWhereInput | undefined {
+  if (!filters) return undefined;
+
+  const conditions: Prisma.TicketWhereInput[] = [];
+
+  if (filters.search) {
+    conditions.push({
+      OR: [
+        { clientName: { contains: filters.search, mode: "insensitive" } },
+        { requestText: { contains: filters.search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (filters.status === STATUS_FILTER_RESUELTOS) {
+    conditions.push({
+      status: { in: [TicketStatus.RESUELTO, TicketStatus.CERRADO] },
+    });
+  } else if (filters.status && isTicketStatus(filters.status)) {
+    conditions.push({ status: filters.status });
+  }
+
+  if (filters.priority) {
+    conditions.push({ priority: filters.priority });
+  }
+
+  if (filters.category) {
+    conditions.push({ category: filters.category });
+  }
+
+  if (conditions.length === 0) return undefined;
+  if (conditions.length === 1) return conditions[0];
+  return { AND: conditions };
+}
+
 export async function listTickets(
-  search?: string,
+  filters?: TicketListFilters,
 ): Promise<DataResult<TicketModel[]>> {
   try {
-    const query = search?.trim();
     const tickets = await db.ticket.findMany({
-      where: query
-        ? {
-            OR: [
-              { clientName: { contains: query, mode: "insensitive" } },
-              { requestText: { contains: query, mode: "insensitive" } },
-            ],
-          }
-        : undefined,
+      where: buildListTicketsWhere(filters),
       orderBy: { createdAt: "desc" },
     });
     return { ok: true, data: tickets };
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error),
+      code: "DATABASE",
+    };
+  }
+}
+
+export async function getSidebarFilterCounts(): Promise<
+  DataResult<SidebarFilterCounts>
+> {
+  try {
+    const [
+      todos,
+      abiertos,
+      enProgreso,
+      resueltos,
+      alta,
+      media,
+      baja,
+      finanzas,
+      legal,
+      compras,
+      operaciones,
+    ] = await Promise.all([
+      db.ticket.count(),
+      db.ticket.count({ where: { status: TicketStatus.ABIERTO } }),
+      db.ticket.count({ where: { status: TicketStatus.EN_PROGRESO } }),
+      db.ticket.count({
+        where: {
+          status: { in: [TicketStatus.RESUELTO, TicketStatus.CERRADO] },
+        },
+      }),
+      db.ticket.count({ where: { priority: TicketPriority.ALTA } }),
+      db.ticket.count({ where: { priority: TicketPriority.MEDIA } }),
+      db.ticket.count({ where: { priority: TicketPriority.BAJA } }),
+      db.ticket.count({ where: { category: TicketCategory.FINANZAS } }),
+      db.ticket.count({ where: { category: TicketCategory.LEGAL } }),
+      db.ticket.count({ where: { category: TicketCategory.COMPRAS } }),
+      db.ticket.count({ where: { category: TicketCategory.OPERACIONES } }),
+    ]);
+
+    return {
+      ok: true,
+      data: {
+        status: { todos, abiertos, enProgreso, resueltos },
+        priority: { alta, media, baja },
+        category: { finanzas, legal, compras, operaciones },
+      },
+    };
   } catch (error) {
     return {
       ok: false,

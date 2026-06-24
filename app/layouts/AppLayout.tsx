@@ -1,11 +1,23 @@
 import { useState } from "react";
-import { Outlet } from "react-router";
+import { Outlet, useLoaderData } from "react-router";
 import { Sidebar } from "../components/layout/Sidebar";
 import { TopBar } from "../components/layout/TopBar";
 import { UserNameModal } from "../components/layout/UserNameModal";
 import { useUserName } from "~/hooks/useUserName";
+import { getSidebarFilterCounts } from "~/data/tickets";
+
+export async function loader() {
+  const result = await getSidebarFilterCounts();
+
+  if (!result.ok) {
+    throw new Response(result.error, { status: 500 });
+  }
+
+  return { sidebarCounts: result.data };
+}
 
 export default function AppLayout() {
+  const { sidebarCounts } = useLoaderData<typeof loader>();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { userName, setUserName, initials, isReady } = useUserName();
@@ -35,6 +47,7 @@ export default function AppLayout() {
         ].join(" ")}
       >
         <Sidebar
+          sidebarCounts={sidebarCounts}
           isCollapsed={isSidebarCollapsed}
           onCollapseToggle={() =>
             setIsSidebarCollapsed((collapsed) => !collapsed)

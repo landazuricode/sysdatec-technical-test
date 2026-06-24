@@ -1,9 +1,19 @@
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useSearchParams } from "react-router";
 import {
   APP_NAME,
   APP_DESCRIPTION,
 } from "~/config/constants";
 import { CountBadge } from "~/components/ui/CountBadge";
+import type { SidebarFilterCounts } from "~/data/tickets";
+import {
+  STATUS_FILTER_RESUELTOS,
+  buildTicketListUrl,
+} from "~/utils/ticket-filters";
+import {
+  TicketCategory,
+  TicketPriority,
+  TicketStatus,
+} from "../../../generated/prisma/enums";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
@@ -23,42 +33,18 @@ import {
   Wallet,
 } from "lucide-react";
 
-// Links de tickets
 const ticketLinks = [
   { to: "/", label: "Panel", icon: LayoutDashboard, end: true },
   { to: "/tickets/new", label: "Nuevo ticket", icon: Ticket, end: false },
 ] as const;
 
-// Estados de tickets
-const ticketStatuses = [
-  { label: "Todos", count: 0, icon: Inbox, tone: "default" as const },
-  { label: "Abiertos", count: 0, icon: CircleDot, tone: "info" as const },
-  { label: "En progreso", count: 0, icon: Clock, tone: "warning" as const },
-  { label: "Resueltos", count: 0, icon: CheckCircle, tone: "success" as const },
-];
-
-// Prioridades de tickets
-const ticketPriorities = [
-  { label: "Alta", count: 0, icon: AlertTriangle, tone: "danger" as const },
-  { label: "Media", count: 0, icon: Minus, tone: "warning" as const },
-  { label: "Baja", count: 0, icon: CircleDot, tone: "success" as const },
-];
-
-// Categorías de tickets
-const ticketCategories = [
-  { label: "Finanzas", count: 0, icon: Wallet, tone: "success" as const },
-  { label: "Legal", count: 0, icon: Scale, tone: "violet" as const },
-  { label: "Compras", count: 0, icon: ShoppingCart, tone: "warning" as const },
-  { label: "Operaciones", count: 0, icon: Settings, tone: "info" as const },
-];
-
 type SidebarProps = {
+  sidebarCounts: SidebarFilterCounts;
   isCollapsed: boolean;
   onCollapseToggle: () => void;
   onNavigate?: () => void;
 };
 
-// Clases de tono de iconos
 const iconToneClasses = {
   default: "text-foreground",
   info: "text-accent-info",
@@ -68,7 +54,6 @@ const iconToneClasses = {
   violet: "text-accent-violet",
 } as const;
 
-// Clases de fondo de iconos
 const iconBgClasses = {
   default: "bg-primary-subtle",
   info: "bg-accent-info-subtle",
@@ -78,14 +63,28 @@ const iconBgClasses = {
   violet: "bg-accent-violet-subtle",
 } as const;
 
+const activeFilterRowClasses = {
+  default: "bg-primary-subtle text-foreground ring-1 ring-inset ring-border",
+  info: "bg-accent-info-subtle text-accent-info ring-1 ring-inset ring-accent-info/30",
+  warning:
+    "bg-accent-warning-subtle text-accent-warning ring-1 ring-inset ring-accent-warning/30",
+  success:
+    "bg-accent-success-subtle text-accent-success ring-1 ring-inset ring-accent-success/30",
+  danger:
+    "bg-accent-danger-subtle text-accent-danger ring-1 ring-inset ring-accent-danger/30",
+  violet:
+    "bg-accent-violet-subtle text-accent-violet ring-1 ring-inset ring-accent-violet/30",
+} as const;
+
 type FilterItem = {
   label: string;
   count: number;
   icon: LucideIcon;
   tone: keyof typeof iconToneClasses;
+  to: string;
+  isActive: boolean;
 };
 
-// Clases de enlace de navegación
 function navLinkClass({ isActive }: { isActive: boolean }, isCollapsed: boolean) {
   return [
     "flex items-center rounded-lg text-sm font-medium transition-colors",
@@ -96,32 +95,43 @@ function navLinkClass({ isActive }: { isActive: boolean }, isCollapsed: boolean)
   ].join(" ");
 }
 
-// Fila de filtros
 function FilterRow({
   item,
   isCollapsed,
+  onNavigate,
 }: {
   item: FilterItem;
   isCollapsed: boolean;
+  onNavigate?: () => void;
 }) {
   const Icon = item.icon;
+  const activeClasses = activeFilterRowClasses[item.tone];
+  const inactiveClasses = "text-foreground hover:bg-primary-subtle";
 
   if (isCollapsed) {
     return (
-      <button
-        type="button"
+      <Link
+        to={item.to}
+        onClick={onNavigate}
         title={`${item.label} (${item.count})`}
-        className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-primary-subtle"
+        className={[
+          "mx-auto flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+          item.isActive ? activeClasses : inactiveClasses,
+        ].join(" ")}
       >
         <Icon className={["h-4 w-4", iconToneClasses[item.tone]].join(" ")} />
-      </button>
+      </Link>
     );
   }
 
   return (
-    <button
-      type="button"
-      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-primary-subtle"
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      className={[
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        item.isActive ? activeClasses : inactiveClasses,
+      ].join(" ")}
     >
       <span
         className={[
@@ -133,19 +143,20 @@ function FilterRow({
       </span>
       <span className="flex-1 text-left">{item.label}</span>
       <CountBadge count={item.count} tone={item.tone} />
-    </button>
+    </Link>
   );
 }
 
-// Sección de filtros
 function FilterSection({
   title,
   items,
   isCollapsed,
+  onNavigate,
 }: {
   title: string;
   items: FilterItem[];
   isCollapsed: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <div className={isCollapsed ? "mt-4" : "mt-8"}>
@@ -157,7 +168,11 @@ function FilterSection({
       <ul className={isCollapsed ? "space-y-1" : "space-y-0.5"}>
         {items.map((item) => (
           <li key={item.label}>
-            <FilterRow item={item} isCollapsed={isCollapsed} />
+            <FilterRow
+              item={item}
+              isCollapsed={isCollapsed}
+              onNavigate={onNavigate}
+            />
           </li>
         ))}
       </ul>
@@ -165,7 +180,116 @@ function FilterSection({
   );
 }
 
-export function Sidebar({ isCollapsed, onCollapseToggle, onNavigate }: SidebarProps) {
+export function Sidebar({
+  sidebarCounts,
+  isCollapsed,
+  onCollapseToggle,
+  onNavigate,
+}: SidebarProps) {
+  const [searchParams] = useSearchParams();
+  const activeStatus = searchParams.get("status");
+  const activePriority = searchParams.get("priority");
+  const activeCategory = searchParams.get("category");
+
+  const statusFilters: FilterItem[] = [
+    {
+      label: "Todos",
+      count: sidebarCounts.status.todos,
+      icon: Inbox,
+      tone: "default",
+      to: buildTicketListUrl(searchParams, { status: null }),
+      isActive: !activeStatus,
+    },
+    {
+      label: "Abiertos",
+      count: sidebarCounts.status.abiertos,
+      icon: CircleDot,
+      tone: "info",
+      to: buildTicketListUrl(searchParams, { status: TicketStatus.ABIERTO }),
+      isActive: activeStatus === TicketStatus.ABIERTO,
+    },
+    {
+      label: "En progreso",
+      count: sidebarCounts.status.enProgreso,
+      icon: Clock,
+      tone: "warning",
+      to: buildTicketListUrl(searchParams, { status: TicketStatus.EN_PROGRESO }),
+      isActive: activeStatus === TicketStatus.EN_PROGRESO,
+    },
+    {
+      label: "Resueltos",
+      count: sidebarCounts.status.resueltos,
+      icon: CheckCircle,
+      tone: "success",
+      to: buildTicketListUrl(searchParams, { status: STATUS_FILTER_RESUELTOS }),
+      isActive: activeStatus === STATUS_FILTER_RESUELTOS,
+    },
+  ];
+
+  const priorityFilters: FilterItem[] = [
+    {
+      label: "Alta",
+      count: sidebarCounts.priority.alta,
+      icon: AlertTriangle,
+      tone: "danger",
+      to: buildTicketListUrl(searchParams, { priority: TicketPriority.ALTA }),
+      isActive: activePriority === TicketPriority.ALTA,
+    },
+    {
+      label: "Media",
+      count: sidebarCounts.priority.media,
+      icon: Minus,
+      tone: "warning",
+      to: buildTicketListUrl(searchParams, { priority: TicketPriority.MEDIA }),
+      isActive: activePriority === TicketPriority.MEDIA,
+    },
+    {
+      label: "Baja",
+      count: sidebarCounts.priority.baja,
+      icon: CircleDot,
+      tone: "success",
+      to: buildTicketListUrl(searchParams, { priority: TicketPriority.BAJA }),
+      isActive: activePriority === TicketPriority.BAJA,
+    },
+  ];
+
+  const categoryFilters: FilterItem[] = [
+    {
+      label: "Finanzas",
+      count: sidebarCounts.category.finanzas,
+      icon: Wallet,
+      tone: "success",
+      to: buildTicketListUrl(searchParams, { category: TicketCategory.FINANZAS }),
+      isActive: activeCategory === TicketCategory.FINANZAS,
+    },
+    {
+      label: "Legal",
+      count: sidebarCounts.category.legal,
+      icon: Scale,
+      tone: "violet",
+      to: buildTicketListUrl(searchParams, { category: TicketCategory.LEGAL }),
+      isActive: activeCategory === TicketCategory.LEGAL,
+    },
+    {
+      label: "Compras",
+      count: sidebarCounts.category.compras,
+      icon: ShoppingCart,
+      tone: "warning",
+      to: buildTicketListUrl(searchParams, { category: TicketCategory.COMPRAS }),
+      isActive: activeCategory === TicketCategory.COMPRAS,
+    },
+    {
+      label: "Operaciones",
+      count: sidebarCounts.category.operaciones,
+      icon: Settings,
+      tone: "info",
+      to: buildTicketListUrl(searchParams, {
+        category: TicketCategory.OPERACIONES,
+      }),
+      isActive: activeCategory === TicketCategory.OPERACIONES,
+    },
+  ];
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div
@@ -261,18 +385,21 @@ export function Sidebar({ isCollapsed, onCollapseToggle, onNavigate }: SidebarPr
 
         <FilterSection
           title="Estados"
-          items={ticketStatuses}
+          items={statusFilters}
           isCollapsed={isCollapsed}
+          onNavigate={onNavigate}
         />
         <FilterSection
           title="Prioridades"
-          items={ticketPriorities}
+          items={priorityFilters}
           isCollapsed={isCollapsed}
+          onNavigate={onNavigate}
         />
         <FilterSection
           title="Categorías"
-          items={ticketCategories}
+          items={categoryFilters}
           isCollapsed={isCollapsed}
+          onNavigate={onNavigate}
         />
       </div>
     </div>

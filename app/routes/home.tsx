@@ -3,6 +3,7 @@ import { TicketDashboard } from "../components/tickets/TicketDashboard";
 import { APP_DESCRIPTION, APP_NAME } from "~/config/constants";
 import { getTicketStats, listTickets } from "~/data/tickets";
 import { serializeTicket } from "~/data/serializers";
+import { parseTicketListFilters } from "~/utils/ticket-filters";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -13,10 +14,10 @@ export function meta({}: Route.MetaArgs) {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  const search = url.searchParams.get("q") ?? undefined;
+  const filters = parseTicketListFilters(url.searchParams);
 
   const [ticketsResult, statsResult] = await Promise.all([
-    listTickets(search),
+    listTickets(filters),
     getTicketStats(),
   ]);
 
@@ -31,7 +32,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     tickets: ticketsResult.data.map(serializeTicket),
     stats: statsResult.data,
-    search: search ?? "",
+    filters,
   };
 }
 
