@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Categorías
+enum TicketCategory {
+  FINANZAS
+  LEGAL
+  COMPRAS
+  OPERACIONES
+}
+
+// Prioridad
+enum TicketPriority {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+// Estado operativo del ticket
+enum TicketStatus {
+  ABIERTO
+  EN_PROGRESO
+  RESUELTO
+  CERRADO
+}
+
+// Estado del proceso de clasificación
+enum ClassificationStatus {
+  PENDIENTE
+  COMPLETADA
+  FALLIDA
+}
+
+model Ticket {
+  id                   String               @id @default(cuid())
+  clientName           String
+  requestText          String
+  attachmentUrl        String?
+  category             TicketCategory?
+  priority             TicketPriority?
+  summary              String?
+  classificationStatus ClassificationStatus @default(PENDIENTE)
+  classificationError  String?
+  classifiedAt         DateTime?
+  status               TicketStatus         @default(ABIERTO)
+  assignee             String?
+  comments             Comment[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  content   String
+  author    String?
+  createdAt DateTime @default(now())
+  @@index([ticketId])
+}
