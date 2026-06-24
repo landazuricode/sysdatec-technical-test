@@ -1,4 +1,4 @@
-import { Form, Link } from "react-router";
+import { Form, Link, useLoaderData } from "react-router";
 import {
   CheckCircle,
   CircleDot,
@@ -8,19 +8,34 @@ import {
   Ticket,
   X,
 } from "lucide-react";
-import {
-  ticketCategoryLabels,
-  ticketPriorityLabels,
-  ticketStatusLabels,
-} from "~/config/ticket-labels";
-import type { SerializedTicket } from "~/data/serializers";
+import type { TicketCategory, TicketPriority, TicketStatus } from "~/types/schema";
+import type { SerializedTicket } from "~/utils/serializers";
 import type { TicketStats } from "~/data/tickets";
 import {
-  STATUS_FILTER_RESUELTOS,
   buildTicketListUrl,
   hasActiveListFilters,
   type TicketListFilters,
-} from "~/utils/ticket-filters";
+} from "~/utils";
+
+const ticketStatusLabels: Record<TicketStatus, string> = {
+  ABIERTO: "Abierto",
+  EN_PROGRESO: "En progreso",
+  RESUELTO: "Resuelto",
+  CERRADO: "Cerrado",
+};
+
+const ticketCategoryLabels: Record<TicketCategory, string> = {
+  FINANZAS: "Finanzas",
+  LEGAL: "Legal",
+  COMPRAS: "Compras",
+  OPERACIONES: "Operaciones",
+};
+
+const ticketPriorityLabels: Record<TicketPriority, string> = {
+  ALTA: "Alta",
+  MEDIA: "Media",
+  BAJA: "Baja",
+};
 
 type TicketDashboardProps = {
   tickets: SerializedTicket[];
@@ -44,9 +59,9 @@ function getFilterChips(filters: TicketListFilters) {
 
   if (filters.status) {
     const statusLabel =
-      filters.status === STATUS_FILTER_RESUELTOS
+      filters.status === "RESUELTOS"
         ? "Resueltos"
-        : ticketStatusLabels[filters.status as keyof typeof ticketStatusLabels];
+        : ticketStatusLabels[filters.status as TicketStatus];
     chips.push({ key: "status", label: `Estado: ${statusLabel}` });
   }
 
@@ -67,7 +82,8 @@ function getFilterChips(filters: TicketListFilters) {
   return chips;
 }
 
-export function TicketDashboard({ tickets, stats, filters }: TicketDashboardProps) {
+export function TicketDashboard() {
+  const { tickets, stats, filters } = useLoaderData<{ tickets: SerializedTicket[]; stats: TicketStats; filters: TicketListFilters }>();
   const filterChips = getFilterChips(filters);
   const hasFilters = hasActiveListFilters(filters);
 

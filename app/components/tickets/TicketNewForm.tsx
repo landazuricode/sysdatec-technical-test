@@ -1,44 +1,18 @@
-import { Form, redirect, useActionData, useNavigation } from "react-router";
-import type { Route } from "./+types/tickets.new";
-import { APP_NAME } from "~/config/constants";
-import { createTicket } from "~/data/tickets";
-import { runTicketClassification } from "~/services/ai/run-ticket-classification";
+import { Form, useActionData, useNavigation } from "react-router";
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: `Nuevo ticket | ${APP_NAME}` },
-    { name: "description", content: "Crear un nuevo ticket" },
-  ];
-}
+type ActionData = {
+  ok: false;
+  error: string;
+  code: string;
+  values: {
+    clientName: string;
+    requestText: string;
+    attachmentUrl: string;
+  };
+};
 
-export async function action({ request }: Route.ActionArgs) {
-  const formData = await request.formData();
-  const clientName = String(formData.get("clientName") ?? "");
-  const requestText = String(formData.get("requestText") ?? "");
-  const attachmentUrl = String(formData.get("attachmentUrl") ?? "") || null;
-
-  const result = await createTicket({
-    clientName,
-    requestText,
-    attachmentUrl,
-  });
-
-  if (!result.ok) {
-    return {
-      ok: false as const,
-      error: result.error,
-      code: result.code,
-      values: { clientName, requestText, attachmentUrl: attachmentUrl ?? "" },
-    };
-  }
-
-  await runTicketClassification(result.data.id, { clientName, requestText });
-
-  return redirect(`/tickets/${result.data.id}`);
-}
-
-export default function TicketsNewRoute() {
-  const actionData = useActionData<typeof action>();
+export function TicketNewForm() {
+  const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 

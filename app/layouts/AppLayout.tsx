@@ -4,11 +4,13 @@ import { Sidebar } from "../components/layout/Sidebar";
 import { TopBar } from "../components/layout/TopBar";
 import { UserNameModal } from "../components/layout/UserNameModal";
 import { useUserName } from "~/hooks/useUserName";
-import { getSidebarFilterCounts } from "~/data/tickets";
+import { getSidebarFilterCounts, type SidebarFilterCounts } from "~/data/tickets";
 
+// Obtener los contadores de filtros de la barra lateral
 export async function loader() {
   const result = await getSidebarFilterCounts();
 
+  // Validar resultado de la consulta
   if (!result.ok) {
     throw new Response(result.error, { status: 500 });
   }
@@ -17,11 +19,12 @@ export async function loader() {
 }
 
 export default function AppLayout() {
-  const { sidebarCounts } = useLoaderData<typeof loader>();
+  const { sidebarCounts } = useLoaderData<{ sidebarCounts: SidebarFilterCounts }>();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { userName, setUserName, initials, isReady } = useUserName();
 
+  // Cerrar el menú lateral móvil
   const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
 
   return (

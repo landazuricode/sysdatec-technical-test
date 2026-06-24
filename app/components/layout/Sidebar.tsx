@@ -6,14 +6,13 @@ import {
 import { CountBadge } from "~/components/ui/CountBadge";
 import type { SidebarFilterCounts } from "~/data/tickets";
 import {
-  STATUS_FILTER_RESUELTOS,
   buildTicketListUrl,
-} from "~/utils/ticket-filters";
+} from "~/utils";
 import {
   TicketCategory,
   TicketPriority,
   TicketStatus,
-} from "../../../generated/prisma/enums";
+} from "~/types/schema";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
@@ -45,6 +44,7 @@ type SidebarProps = {
   onNavigate?: () => void;
 };
 
+// Clases de iconos
 const iconToneClasses = {
   default: "text-foreground",
   info: "text-accent-info",
@@ -54,6 +54,7 @@ const iconToneClasses = {
   violet: "text-accent-violet",
 } as const;
 
+// Clases de fondo de iconos
 const iconBgClasses = {
   default: "bg-primary-subtle",
   info: "bg-accent-info-subtle",
@@ -63,6 +64,7 @@ const iconBgClasses = {
   violet: "bg-accent-violet-subtle",
 } as const;
 
+// Clases de filas de filtros activos
 const activeFilterRowClasses = {
   default: "bg-primary-subtle text-foreground ring-1 ring-inset ring-border",
   info: "bg-accent-info-subtle text-accent-info ring-1 ring-inset ring-accent-info/30",
@@ -85,6 +87,7 @@ type FilterItem = {
   isActive: boolean;
 };
 
+// Clases de enlaces de navegación
 function navLinkClass({ isActive }: { isActive: boolean }, isCollapsed: boolean) {
   return [
     "flex items-center rounded-lg text-sm font-medium transition-colors",
@@ -95,6 +98,7 @@ function navLinkClass({ isActive }: { isActive: boolean }, isCollapsed: boolean)
   ].join(" ");
 }
 
+// Fila de filtro
 function FilterRow({
   item,
   isCollapsed,
@@ -221,8 +225,8 @@ export function Sidebar({
       count: sidebarCounts.status.resueltos,
       icon: CheckCircle,
       tone: "success",
-      to: buildTicketListUrl(searchParams, { status: STATUS_FILTER_RESUELTOS }),
-      isActive: activeStatus === STATUS_FILTER_RESUELTOS,
+      to: buildTicketListUrl(searchParams, { status: "RESUELTOS" }),
+      isActive: activeStatus === "RESUELTOS",
     },
   ];
 

@@ -1,33 +1,10 @@
-import {
-  TicketCategory,
-  TicketPriority,
-} from "../../../generated/prisma/enums";
-import { OPENAI_API_URL, OPENAI_MODEL } from "~/config/ai";
-import {
-  getAiErrorMessage,
-  type AiResult,
-  type ClassifyTicketInput,
-  type TicketClassification,
-} from "./types";
-
-const SYSTEM_PROMPT = `Eres un clasificador de tickets operativos para una empresa.
-Analiza la solicitud del cliente y responde ÚNICAMENTE con un objeto JSON válido (sin markdown) con esta estructura exacta:
-{
-  "category": "FINANZAS" | "LEGAL" | "COMPRAS" | "OPERACIONES",
-  "priority": "ALTA" | "MEDIA" | "BAJA",
-  "summary": "resumen breve en español de máximo 2 oraciones"
-}
-
-Criterios de categoría:
-- FINANZAS: pagos, facturas, presupuestos, reembolsos, contabilidad
-- LEGAL: contratos, cumplimiento, políticas, asuntos jurídicos
-- COMPRAS: adquisiciones, proveedores, cotizaciones, inventario
-- OPERACIONES: procesos internos, logística, soporte operativo, incidencias
-
-Criterios de prioridad:
-- ALTA: urgente, bloquea operación, plazo inmediato
-- MEDIA: importante pero no bloqueante
-- BAJA: informativo o puede esperar`;
+import { getErrorMessage, type Result } from "~/utils";
+import { isTicketCategory, isTicketPriority } from "~/utils";
+import type {
+  ClassifyTicketInput,
+  TicketClassification,
+} from "~/types/schema";
+import { TICKET_CLASSIFIER_PROMPT } from "./prompt";
 
 type RawClassification = {
   category?: string;
@@ -35,15 +12,8 @@ type RawClassification = {
   summary?: string;
 };
 
-function isTicketCategory(value: string): value is TicketCategory {
-  return Object.values(TicketCategory).includes(value as TicketCategory);
-}
-
-function isTicketPriority(value: string): value is TicketPriority {
-  return Object.values(TicketPriority).includes(value as TicketPriority);
-}
-
-function parseClassification(content: string): AiResult<TicketClassification> {
+// Parsear y validar la respuesta de la IA
+function parseResponse(content: string): Result<TicketClassification> {
   try {
     const parsed = JSON.parse(content) as RawClassification;
 
@@ -88,10 +58,12 @@ function parseClassification(content: string): AiResult<TicketClassification> {
   }
 }
 
+// Clasificar un ticket con OpenAI
 export async function classifyTicket(
   input: ClassifyTicketInput,
-): Promise<AiResult<TicketClassification>> {
+): Promise<Result<TicketClassification>> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
+
   if (!apiKey) {
     return {
       ok: false,
@@ -101,18 +73,18 @@ export async function classifyTicket(
   }
 
   try {
-    const response = await fetch(OPENAI_API_URL, {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
         temperature: 0.2,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: TICKET_CLASSIFIER_PROMPT },
           {
             role: "user",
             content: `Cliente: ${input.clientName.trim()}\n\nSolicitud:\n${input.requestText.trim()}`,
@@ -143,11 +115,11 @@ export async function classifyTicket(
       };
     }
 
-    return parseClassification(content);
+    return parseResponse(content);
   } catch (error) {
     return {
       ok: false,
-      error: getAiErrorMessage(error),
+      error: getErrorMessage(error),
       code: "AI",
     };
   }

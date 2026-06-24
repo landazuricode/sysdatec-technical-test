@@ -2,10 +2,10 @@ import type { Route } from "./+types/home";
 import { TicketDashboard } from "../components/tickets/TicketDashboard";
 import { APP_DESCRIPTION, APP_NAME } from "~/config/constants";
 import { getTicketStats, listTickets } from "~/data/tickets";
-import { serializeTicket } from "~/data/serializers";
-import { parseTicketListFilters } from "~/utils/ticket-filters";
+import { serializeTicket } from "~/utils/serializers";
+import { parseTicketListFilters } from "~/utils";
 
-export function meta({}: Route.MetaArgs) {
+export function meta() {
   return [
     { title: `Panel de control | ${APP_NAME}` },
     { name: "description", content: APP_DESCRIPTION },
@@ -36,6 +36,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
-export default function Home({ loaderData }: Route.ComponentProps) {
-  return <TicketDashboard {...loaderData} />;
+export default function Route() {
+  return <TicketDashboard />;
 }

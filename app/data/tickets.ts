@@ -3,21 +3,16 @@ import {
   TicketCategory,
   TicketPriority,
   TicketStatus,
-  type TicketCategory as TicketCategoryType,
-  type TicketPriority as TicketPriorityType,
-  type TicketStatus as TicketStatusType,
-} from "../../generated/prisma/enums";
-import type { Prisma } from "../../generated/prisma/client";
-import type { TicketModel } from "../../generated/prisma/models/Ticket";
-import { STATUS_FILTER_RESUELTOS, type TicketListFilters } from "~/utils/ticket-filters";
+  type ClassifyTicketInput,
+  type Comment,
+  type Ticket,
+  type TicketClassification,
+} from "~/types/schema";
+import { classifyTicket } from "~/services/ticket-classifier";
+import { isTicketStatus } from "~/utils";
+import type { TicketListFilters } from "~/utils";
 import { db } from "./database";
-import { getErrorMessage, type DataResult } from "./result";
-
-export type TicketClassificationInput = {
-  category: TicketCategoryType;
-  priority: TicketPriorityType;
-  summary: string;
-};
+import { getErrorMessage, type Result } from "~/utils";
 
 export type CreateTicketInput = {
   clientName: string;
@@ -52,10 +47,15 @@ export type SidebarFilterCounts = {
   };
 };
 
-export type TicketWithComments = TicketModel & {
-  comments: { id: string; ticketId: string; content: string; author: string | null; createdAt: Date }[];
+export type TicketWithComments = Ticket & {
+  comments: Comment[];
 };
 
+type TicketWhereInput = NonNullable<
+  Parameters<typeof db.ticket.findMany>[0]
+>["where"];
+
+// Validar el input de creación de ticket
 function validateCreateTicketInput(input: CreateTicketInput): string | null {
   if (!input.clientName?.trim()) {
     return "El nombre del cliente es requerido";
@@ -73,27 +73,26 @@ function validateCreateTicketInput(input: CreateTicketInput): string | null {
   return null;
 }
 
-function isTicketStatus(value: string): value is TicketStatusType {
-  return Object.values(TicketStatus).includes(value as TicketStatusType);
-}
-
+// Construir el where para la lista de tickets
 function buildListTicketsWhere(
   filters?: TicketListFilters,
-): Prisma.TicketWhereInput | undefined {
+): TicketWhereInput | undefined {
   if (!filters) return undefined;
 
-  const conditions: Prisma.TicketWhereInput[] = [];
+  const conditions: TicketWhereInput[] = [];
 
+  // Buscar por nombre del cliente o texto de la solicitud
   if (filters.search) {
     conditions.push({
       OR: [
-        { clientName: { contains: filters.search, mode: "insensitive" } },
-        { requestText: { contains: filters.search, mode: "insensitive" } },
+        { clientName: { contains: filters.search } },
+        { requestText: { contains: filters.search } },
       ],
     });
   }
 
-  if (filters.status === STATUS_FILTER_RESUELTOS) {
+  // Buscar por estado
+  if (filters.status === "RESUELTOS") {
     conditions.push({
       status: { in: [TicketStatus.RESUELTO, TicketStatus.CERRADO] },
     });
@@ -101,22 +100,25 @@ function buildListTicketsWhere(
     conditions.push({ status: filters.status });
   }
 
+  // Buscar por prioridad
   if (filters.priority) {
     conditions.push({ priority: filters.priority });
   }
 
+  // Buscar por categoría
   if (filters.category) {
     conditions.push({ category: filters.category });
   }
 
   if (conditions.length === 0) return undefined;
-  if (conditions.length === 1) return conditions[0];
-  return { AND: conditions };
+  if (conditions.length === 1) return conditions[0]!;
+  return { AND: conditions } as TicketWhereInput;
 }
 
+// Listar los tickets
 export async function listTickets(
   filters?: TicketListFilters,
-): Promise<DataResult<TicketModel[]>> {
+): Promise<Result<Ticket[]>> {
   try {
     const tickets = await db.ticket.findMany({
       where: buildListTicketsWhere(filters),
@@ -132,8 +134,9 @@ export async function listTickets(
   }
 }
 
+// Obtener los contadores de filtros de la barra lateral
 export async function getSidebarFilterCounts(): Promise<
-  DataResult<SidebarFilterCounts>
+  Result<SidebarFilterCounts>
 > {
   try {
     const [
@@ -183,7 +186,8 @@ export async function getSidebarFilterCounts(): Promise<
   }
 }
 
-export async function getTicketStats(): Promise<DataResult<TicketStats>> {
+// Obtener los estadísticas de los tickets
+export async function getTicketStats(): Promise<Result<TicketStats>> {
   try {
     const [total, nuevos, enProgreso, resueltos] = await Promise.all([
       db.ticket.count(),
@@ -211,9 +215,10 @@ export async function getTicketStats(): Promise<DataResult<TicketStats>> {
   }
 }
 
+// Obtener un ticket por su ID
 export async function getTicketById(
   id: string,
-): Promise<DataResult<TicketWithComments>> {
+): Promise<Result<TicketWithComments>> {
   try {
     const ticket = await db.ticket.findUnique({
       where: { id },
@@ -240,9 +245,10 @@ export async function getTicketById(
   }
 }
 
+// Crear un ticket
 export async function createTicket(
   input: CreateTicketInput,
-): Promise<DataResult<TicketModel>> {
+): Promise<Result<Ticket>> {
   const validationError = validateCreateTicketInput(input);
   if (validationError) {
     return { ok: false, error: validationError, code: "VALIDATION" };
@@ -266,10 +272,11 @@ export async function createTicket(
   }
 }
 
+// Guardar la clasificación de un ticket
 export async function saveTicketClassification(
   id: string,
-  classification: TicketClassificationInput,
-): Promise<DataResult<TicketModel>> {
+  classification: TicketClassification,
+): Promise<Result<Ticket>> {
   try {
     const existing = await db.ticket.findUnique({ where: { id } });
     if (!existing) {
@@ -301,10 +308,11 @@ export async function saveTicketClassification(
   }
 }
 
+// Marcar un ticket como fallido
 export async function markTicketClassificationFailed(
   id: string,
   errorMessage: string,
-): Promise<DataResult<TicketModel>> {
+): Promise<Result<Ticket>> {
   try {
     const existing = await db.ticket.findUnique({ where: { id } });
     if (!existing) {
@@ -333,10 +341,25 @@ export async function markTicketClassificationFailed(
   }
 }
 
+// Clasificar ticket con IA y persistir resultado
+export async function classifyTicketWithAi(
+  ticketId: string,
+  input: ClassifyTicketInput,
+): Promise<Result<Ticket>> {
+  const classification = await classifyTicket(input);
+
+  if (classification.ok) {
+    return saveTicketClassification(ticketId, classification.data);
+  }
+
+  return markTicketClassificationFailed(ticketId, classification.error);
+}
+
+// Actualizar el estado de un ticket
 export async function updateTicketStatus(
   id: string,
   status: string,
-): Promise<DataResult<TicketModel>> {
+): Promise<Result<Ticket>> {
   if (!isTicketStatus(status)) {
     return { ok: false, error: "Estado de ticket inválido", code: "VALIDATION" };
   }
@@ -365,10 +388,11 @@ export async function updateTicketStatus(
   }
 }
 
+// Actualizar el asignado de un ticket
 export async function updateTicketAssignee(
   id: string,
   assignee: string | null,
-): Promise<DataResult<TicketModel>> {
+): Promise<Result<Ticket>> {
   try {
     const existing = await db.ticket.findUnique({ where: { id } });
     if (!existing) {

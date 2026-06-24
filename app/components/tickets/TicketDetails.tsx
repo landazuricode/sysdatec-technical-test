@@ -1,117 +1,51 @@
-import { Form, useActionData, useNavigation } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { Sparkles } from "lucide-react";
-import type { Route } from "./+types/tickets.$ticketId";
-import { APP_NAME } from "~/config/constants";
 import {
-  classificationStatusLabels,
-  ticketCategoryLabels,
-  ticketPriorityLabels,
-  ticketStatusLabels,
-  ticketStatusOptions,
-} from "~/config/ticket-labels";
-import { ClassificationStatus } from "../../generated/prisma/enums";
-import { addComment } from "~/data/comments";
-import { serializeTicket } from "~/data/serializers";
-import {
-  getTicketById,
-  updateTicketAssignee,
-  updateTicketStatus,
-} from "~/data/tickets";
-import { runTicketClassification } from "~/services/ai/run-ticket-classification";
+  TicketStatus,
+  type ClassificationStatus,
+  type TicketCategory,
+  type TicketPriority,
+} from "~/types/schema";
+import type { SerializedComment, SerializedTicket } from "~/utils/serializers";
 
-export function meta({ loaderData }: Route.MetaArgs) {
-  const title = loaderData?.ticket
-    ? `${loaderData.ticket.clientName} | ${APP_NAME}`
-    : `Detalle del ticket | ${APP_NAME}`;
+const classificationStatusLabels: Record<ClassificationStatus, string> = {
+  PENDIENTE: "Pendiente",
+  COMPLETADA: "Completada",
+  FALLIDA: "Fallida",
+};
 
-  return [
-    { title },
-    { name: "description", content: "Ver y gestionar un ticket" },
-  ];
-}
+const ticketStatusLabels: Record<keyof typeof TicketStatus, string> = {
+  ABIERTO: "Abierto",
+  EN_PROGRESO: "En progreso",
+  RESUELTO: "Resuelto",
+  CERRADO: "Cerrado",
+};
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const result = await getTicketById(params.ticketId);
+const ticketCategoryLabels: Record<TicketCategory, string> = {
+  FINANZAS: "Finanzas",
+  LEGAL: "Legal",
+  COMPRAS: "Compras",
+  OPERACIONES: "Operaciones",
+};
 
-  if (!result.ok) {
-    if (result.code === "NOT_FOUND") {
-      throw new Response(result.error, { status: 404 });
-    }
-    throw new Response(result.error, { status: 500 });
-  }
+const ticketPriorityLabels: Record<TicketPriority, string> = {
+  ALTA: "Alta",
+  MEDIA: "Media",
+  BAJA: "Baja",
+};
 
-  return { ticket: serializeTicket(result.data) };
-}
+const ticketStatusOptions = Object.values(TicketStatus).map((value) => ({
+  value,
+  label: ticketStatusLabels[value],
+}));
 
-export async function action({ request, params }: Route.ActionArgs) {
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+type TicketDetailsProps = {
+  ticket: SerializedTicket;
+};
 
-  if (intent === "updateStatus") {
-    const result = await updateTicketStatus(
-      params.ticketId,
-      String(formData.get("status") ?? ""),
-    );
-
-    if (!result.ok) {
-      return { ok: false as const, error: result.error, intent };
-    }
-
-    return { ok: true as const, intent };
-  }
-
-  if (intent === "updateAssignee") {
-    const result = await updateTicketAssignee(
-      params.ticketId,
-      String(formData.get("assignee") ?? "") || null,
-    );
-
-    if (!result.ok) {
-      return { ok: false as const, error: result.error, intent };
-    }
-
-    return { ok: true as const, intent };
-  }
-
-  if (intent === "addComment") {
-    const result = await addComment({
-      ticketId: params.ticketId,
-      content: String(formData.get("content") ?? ""),
-      author: String(formData.get("author") ?? "") || null,
-    });
-
-    if (!result.ok) {
-      return { ok: false as const, error: result.error, intent };
-    }
-
-    return { ok: true as const, intent };
-  }
-
-  if (intent === "retryClassification") {
-    const ticketResult = await getTicketById(params.ticketId);
-
-    if (!ticketResult.ok) {
-      return { ok: false as const, error: ticketResult.error, intent };
-    }
-
-    const classifyResult = await runTicketClassification(params.ticketId, {
-      clientName: ticketResult.data.clientName,
-      requestText: ticketResult.data.requestText,
-    });
-
-    if (!classifyResult.ok) {
-      return { ok: false as const, error: classifyResult.error, intent };
-    }
-
-    return { ok: true as const, intent };
-  }
-
-  return {
-    ok: false as const,
-    error: "Acción no reconocida",
-    intent: "unknown",
-  };
-}
+type ActionData =
+  | { ok: true; intent: string }
+  | { ok: false; error: string; intent: string };
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("es-CO", {
@@ -120,14 +54,14 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
-export default function TicketDetailRoute({ loaderData }: Route.ComponentProps) {
-  const { ticket } = loaderData;
-  const actionData = useActionData<typeof action>();
+export function TicketDetails() {
+  const { ticket } = useLoaderData<{ ticket: SerializedTicket }>();
+  const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   const canRetryClassification =
-    ticket.classificationStatus === ClassificationStatus.FALLIDA ||
-    ticket.classificationStatus === ClassificationStatus.PENDIENTE;
+    ticket.classificationStatus === "FALLIDA" ||
+    ticket.classificationStatus === "PENDIENTE";
 
   return (
     <div className="space-y-6">
@@ -211,7 +145,7 @@ export default function TicketDetailRoute({ loaderData }: Route.ComponentProps) 
             </div>
           )}
 
-          {ticket.classificationStatus === ClassificationStatus.FALLIDA &&
+          {ticket.classificationStatus === "FALLIDA" &&
             ticket.classificationError && (
               <div className="rounded-lg border border-accent-danger/30 bg-accent-danger-subtle px-4 py-3">
                 <h3 className="text-sm font-medium text-accent-danger">
@@ -314,7 +248,7 @@ export default function TicketDetailRoute({ loaderData }: Route.ComponentProps) 
 
         {ticket.comments && ticket.comments.length > 0 ? (
           <ul className="mt-4 space-y-3">
-            {ticket.comments.map((comment) => (
+            {ticket.comments.map((comment: SerializedComment) => (
               <li
                 key={comment.id}
                 className="rounded-lg border border-border bg-primary-subtle/30 px-4 py-3"

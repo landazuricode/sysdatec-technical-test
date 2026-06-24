@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-
 const THEME_STORAGE_KEY = "theme";
-
 type Theme = "light" | "dark";
 
 // Obtener el tema almacenado

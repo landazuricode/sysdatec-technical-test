@@ -109,9 +109,9 @@ La app en desarrollo corre en **http://localhost:5173**.
                     │                             │                             │
                     ▼                             ▼                             ▼
            ┌────────────────┐          ┌─────────────────┐          ┌──────────────────┐
-           │   app/data/    │          │ app/services/ai │          │   PostgreSQL     │
-           │ tickets,       │          │ classify-ticket   │          │   (Prisma ORM)   │
-           │ comments       │          │ (OpenAI API)      │          │                  │
+           │   app/data/    │          │ services/ticket- │          │   PostgreSQL     │
+           │ tickets,       │          │ classifier       │          │   (Prisma ORM)   │
+           │ comments       │          │ (OpenAI API)     │          │                  │
            └────────────────┘          └─────────────────┘          └──────────────────┘
 ```
 
@@ -123,14 +123,19 @@ app/
 ├── config/           # Constantes, labels, config de IA
 ├── data/             # Acceso a base de datos (Prisma + try/catch)
 │   ├── database.ts   # Cliente Prisma con adapter PostgreSQL
-│   ├── tickets.ts    # CRUD y clasificación en DB
+│   ├── tickets.ts    # CRUD, clasificación IA y persistencia
 │   └── comments.ts   # Comentarios
 ├── layouts/          # AppLayout (sidebar + topbar)
 ├── routes/           # Rutas con loaders y actions
 │   ├── home.tsx              # Panel de control
 │   ├── tickets.new.tsx       # Crear ticket
 │   └── tickets.$ticketId.tsx # Detalle y gestión
-└── services/ai/      # Integración OpenAI (sin acceso directo a DB)
+├── services/
+│   └── ticket-classifier/  # Integración OpenAI (sin acceso directo a DB)
+│       ├── classify.ts     # classifyTicket()
+│       └── prompt.ts       # Prompt del clasificador
+└── types/
+    └── schema.ts       # Tipos de dominio (enums, modelos)
 prisma/
 ├── schema.prisma     # Modelos Ticket y Comment
 └── migrations/       # Migraciones SQL
@@ -140,8 +145,8 @@ docker/
 
 ### Capas y responsabilidades
 
-- **`app/data/`** — Toda interacción con PostgreSQL. Cada función usa try/catch y devuelve `DataResult<T>` (`ok` / `error` / `code`).
-- **`app/services/ai/`** — Llamadas a OpenAI. No escribe en la base de datos directamente.
+- **`app/data/`** — Interacción con PostgreSQL y operaciones de dominio del ticket (incluye `classifyTicketWithAi`). Cada función devuelve `Result<T>` (`ok` / `error` / `code`).
+- **`app/services/ticket-classifier/`** — Llamadas a OpenAI. No escribe en la base de datos directamente.
 - **`app/routes/`** — Orquestan loaders (lectura) y actions (escritura). Manejan errores HTTP (404, 500) y respuestas de formulario.
 
 ---
@@ -156,7 +161,7 @@ action en /tickets/new
         │
         ├──► createTicket()          → INSERT en PostgreSQL (estado: PENDIENTE)
         │
-        └──► runTicketClassification()
+        └──► classifyTicketWithAi()
                     │
                     ├──► classifyTicket()  → POST a OpenAI (JSON: categoría, prioridad, resumen)
                     │

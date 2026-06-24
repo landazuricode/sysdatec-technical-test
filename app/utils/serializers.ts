@@ -1,13 +1,12 @@
-import type { CommentModel } from "../../generated/prisma/models/Comment";
-import type { TicketModel } from "../../generated/prisma/models/Ticket";
+import type { Comment, Ticket } from "~/types/schema";
 
-export type SerializedComment = Omit<CommentModel, "createdAt"> & {
+export type SerializedComment = Omit<Comment, "createdAt"> & {
   createdAt: string;
 };
 
 export type SerializedTicket = Omit<
-  TicketModel,
-  "createdAt" | "updatedAt" | "classifiedAt"
+  Ticket,
+  "createdAt" | "updatedAt" | "classifiedAt" | "comments"
 > & {
   createdAt: string;
   updatedAt: string;
@@ -15,15 +14,17 @@ export type SerializedTicket = Omit<
   comments?: SerializedComment[];
 };
 
-export function serializeComment(comment: CommentModel): SerializedComment {
+// Serializar comentario para la UI
+export function serializeComment(comment: Comment): SerializedComment {
   return {
     ...comment,
     createdAt: comment.createdAt.toISOString(),
   };
 }
 
+// Serializar ticket para la UI
 export function serializeTicket(
-  ticket: TicketModel & { comments?: CommentModel[] },
+  ticket: Ticket & { comments?: Comment[] },
 ): SerializedTicket {
   return {
     ...ticket,
