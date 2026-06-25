@@ -7,6 +7,7 @@ import {
   type TicketPriority,
 } from "~/types/schema";
 import type { SerializedComment, SerializedTicket } from "~/utils/serializers";
+import { formatDate } from "~/utils";
 
 const classificationStatusLabels: Record<ClassificationStatus, string> = {
   PENDIENTE: "Pendiente",
@@ -46,13 +47,6 @@ type TicketDetailsProps = {
 type ActionData =
   | { ok: true; intent: string }
   | { ok: false; error: string; intent: string };
-
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 export function TicketDetails() {
   const { ticket } = useLoaderData<{ ticket: SerializedTicket }>();
@@ -118,13 +112,13 @@ export function TicketDetails() {
             <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Creado
             </dt>
-            <dd className="mt-1 text-sm">{formatDate(ticket.createdAt)}</dd>
+            <dd className="mt-1 text-sm">{formatDate(ticket.createdAt, { dateStyle: "medium" })}</dd>
           </div>
           <div>
             <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Actualizado
             </dt>
-            <dd className="mt-1 text-sm">{formatDate(ticket.updatedAt)}</dd>
+            <dd className="mt-1 text-sm">{formatDate(ticket.updatedAt, { dateStyle: "medium" })}</dd>
           </div>
         </dl>
 
@@ -256,7 +250,7 @@ export function TicketDetails() {
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>{comment.author ?? "Anónimo"}</span>
                   <time dateTime={comment.createdAt}>
-                    {formatDate(comment.createdAt)}
+                    {formatDate(comment.createdAt, { dateStyle: "medium" })}
                   </time>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm">

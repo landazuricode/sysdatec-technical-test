@@ -93,7 +93,7 @@ function navLinkClass({ isActive }: { isActive: boolean }, isCollapsed: boolean)
     "flex items-center rounded-lg text-sm font-medium transition-colors",
     isCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
     isActive
-      ? "bg-primary text-primary-foreground"
+      ? "bg-primary-subtle text-foreground ring-1 ring-inset ring-border"
       : "text-foreground hover:bg-primary-subtle",
   ].join(" ");
 }
@@ -353,10 +353,10 @@ export function Sidebar({
           onClick={onNavigate}
           title={isCollapsed ? "Abrir ticket" : undefined}
           className={[
-            "mb-6 flex items-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover",
+            "mb-6 flex items-center rounded-lg border border-foreground/15 bg-primary-subtle text-sm font-semibold text-foreground shadow-sm transition-colors hover:border-foreground/25 hover:bg-foreground/5",
             isCollapsed
               ? "mx-auto h-9 w-9 justify-center"
-              : "w-full justify-center gap-2 px-4 py-2.5",
+              : "w-full justify-center gap-2 px-3 py-2.5",
           ].join(" ")}
         >
           <Plus className="h-4 w-4 shrink-0" />

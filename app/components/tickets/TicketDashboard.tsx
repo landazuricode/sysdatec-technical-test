@@ -1,6 +1,8 @@
 import { Form, Link, useLoaderData } from "react-router";
 import {
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   CircleDot,
   Clock,
   Inbox,
@@ -13,6 +15,7 @@ import type { SerializedTicket } from "~/utils/serializers";
 import type { TicketStats } from "~/data/tickets";
 import {
   buildTicketListUrl,
+  formatDate,
   hasActiveListFilters,
   type TicketListFilters,
 } from "~/utils";
@@ -37,19 +40,7 @@ const ticketPriorityLabels: Record<TicketPriority, string> = {
   BAJA: "Baja",
 };
 
-type TicketDashboardProps = {
-  tickets: SerializedTicket[];
-  stats: TicketStats;
-  filters: TicketListFilters;
-};
-
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
-
+// Obtener los chips de filtros
 function getFilterChips(filters: TicketListFilters) {
   const chips: { key: keyof TicketListFilters; label: string }[] = [];
 
@@ -83,10 +74,21 @@ function getFilterChips(filters: TicketListFilters) {
 }
 
 export function TicketDashboard() {
-  const { tickets, stats, filters } = useLoaderData<{ tickets: SerializedTicket[]; stats: TicketStats; filters: TicketListFilters }>();
+  const { tickets, total, page, pageSize, stats, filters } = useLoaderData<{
+    tickets: SerializedTicket[];
+    total: number;
+    page: number;
+    pageSize: number;
+    stats: TicketStats;
+    filters: TicketListFilters;
+  }>();
   const filterChips = getFilterChips(filters);
   const hasFilters = hasActiveListFilters(filters);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, total);
 
+  // Estadísticas de la barra lateral
   const dashboardStats = [
     {
       label: "Total tickets",
@@ -118,6 +120,7 @@ export function TicketDashboard() {
     },
   ];
 
+  // Colores de los iconos de las estadísticas
   const statIconBg = {
     default: "bg-primary-subtle text-foreground",
     info: "bg-accent-info-subtle text-accent-info",
@@ -125,6 +128,7 @@ export function TicketDashboard() {
     success: "bg-accent-success-subtle text-accent-success",
   } as const;
 
+  // Colores de los bordes de las estadísticas
   const statAccentBorder = {
     default: "border-l-foreground",
     info: "border-l-accent-info",
@@ -132,21 +136,23 @@ export function TicketDashboard() {
     success: "border-l-accent-success",
   } as const;
 
+  // Parámetros de la URL
   const searchParams = new URLSearchParams();
   if (filters.search) searchParams.set("q", filters.search);
   if (filters.status) searchParams.set("status", filters.status);
   if (filters.priority) searchParams.set("priority", filters.priority);
   if (filters.category) searchParams.set("category", filters.category);
+  if (page > 1) searchParams.set("page", String(page));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <div className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Resumen de tickets</h2>
           {hasFilters && (
             <p className="mt-1 text-sm text-muted-foreground">
-              Mostrando {tickets.length} resultado{tickets.length === 1 ? "" : "s"}{" "}
-              filtrado{tickets.length === 1 ? "" : "s"}
+              Mostrando {total} resultado{total === 1 ? "" : "s"}{" "}
+              filtrado{total === 1 ? "" : "s"}
             </p>
           )}
         </div>
@@ -166,13 +172,14 @@ export function TicketDashboard() {
             name="q"
             defaultValue={filters.search ?? ""}
             placeholder="Buscar ticket..."
-            className="w-full rounded-lg border border-border bg-surface py-2.5 pr-3 pl-10 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground"
+            autoComplete="off"
+            className="w-full rounded-xl border border-border bg-primary-subtle/40 py-3 pr-4 pl-10 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-muted-foreground focus:border-foreground/20 focus:bg-background focus:outline-none focus:ring-2 focus:ring-foreground/5 focus-visible:outline-none"
           />
         </Form>
       </div>
 
       {filterChips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {filterChips.map((chip) => {
             const paramKey =
               chip.key === "search"
@@ -199,7 +206,7 @@ export function TicketDashboard() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid shrink-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {dashboardStats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -232,8 +239,8 @@ export function TicketDashboard() {
         })}
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-surface p-6 shadow-sm">
+        <div className="mb-6 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold">
               {hasFilters ? "Tickets filtrados" : "Tickets recientes"}
@@ -249,7 +256,7 @@ export function TicketDashboard() {
         </div>
 
         {tickets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-primary-subtle/40 px-6 py-14 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-primary-subtle/40 px-6 py-14 text-center">
             <h4 className="text-base font-semibold">
               {hasFilters ? "Sin resultados" : "Aún no hay tickets"}
             </h4>
@@ -276,52 +283,109 @@ export function TicketDashboard() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="px-3 py-3 font-medium">Cliente</th>
-                  <th className="px-3 py-3 font-medium">Estado</th>
-                  <th className="px-3 py-3 font-medium">Categoría</th>
-                  <th className="px-3 py-3 font-medium">Prioridad</th>
-                  <th className="px-3 py-3 font-medium">Creado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tickets.map((ticket) => (
-                  <tr
-                    key={ticket.id}
-                    className="border-b border-border/70 transition-colors hover:bg-primary-subtle/40"
-                  >
-                    <td className="px-3 py-3">
-                      <Link
-                        to={`/tickets/${ticket.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {ticket.clientName}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-3">
-                      {ticketStatusLabels[ticket.status]}
-                    </td>
-                    <td className="px-3 py-3">
-                      {ticket.category
-                        ? ticketCategoryLabels[ticket.category]
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-3">
-                      {ticket.priority
-                        ? ticketPriorityLabels[ticket.priority]
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-3 text-muted-foreground">
-                      {formatDate(ticket.createdAt)}
-                    </td>
+          <>
+            <div className="min-h-0 flex-1 overflow-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-surface text-muted-foreground">
+                    <th className="sticky top-0 z-10 bg-surface px-3 py-3 font-medium">
+                      Cliente
+                    </th>
+                    <th className="sticky top-0 z-10 bg-surface px-3 py-3 font-medium">
+                      Estado
+                    </th>
+                    <th className="sticky top-0 z-10 bg-surface px-3 py-3 font-medium">
+                      Categoría
+                    </th>
+                    <th className="sticky top-0 z-10 bg-surface px-3 py-3 font-medium">
+                      Prioridad
+                    </th>
+                    <th className="sticky top-0 z-10 bg-surface px-3 py-3 font-medium">
+                      Creado
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {tickets.map((ticket) => (
+                    <tr
+                      key={ticket.id}
+                      className="border-b border-border/70 transition-colors hover:bg-primary-subtle/40"
+                    >
+                      <td className="px-3 py-3">
+                        <Link
+                          to={`/tickets/${ticket.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {ticket.clientName}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3">
+                        {ticketStatusLabels[ticket.status]}
+                      </td>
+                      <td className="px-3 py-3">
+                        {ticket.category
+                          ? ticketCategoryLabels[ticket.category]
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-3">
+                        {ticket.priority
+                          ? ticketPriorityLabels[ticket.priority]
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-3 text-muted-foreground">
+                        {formatDate(ticket.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4 flex shrink-0 flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {rangeStart}–{rangeEnd} de {total}
+                </p>
+                <div className="flex items-center gap-2">
+                  {page > 1 ? (
+                    <Link
+                      to={buildTicketListUrl(searchParams, {
+                        page: page - 1 === 1 ? null : String(page - 1),
+                      })}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium transition-colors hover:bg-primary-subtle"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted-foreground opacity-50">
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </span>
+                  )}
+                  <span className="px-2 text-sm text-muted-foreground">
+                    Página {page} de {totalPages}
+                  </span>
+                  {page < totalPages ? (
+                    <Link
+                      to={buildTicketListUrl(searchParams, {
+                        page: String(page + 1),
+                      })}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium transition-colors hover:bg-primary-subtle"
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted-foreground opacity-50">
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

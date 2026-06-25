@@ -29,13 +29,22 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw new Response(statsResult.error, { status: 500 });
   }
 
+  const { tickets, total, page, pageSize } = ticketsResult.data;
+
   return {
-    tickets: ticketsResult.data.map(serializeTicket),
+    tickets: tickets.map(serializeTicket),
+    total,
+    page,
+    pageSize,
     stats: statsResult.data,
     filters,
   };
 }
 
 export default function Route() {
-  return <TicketDashboard />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <TicketDashboard />
+    </div>
+  );
 }

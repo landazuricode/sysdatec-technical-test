@@ -10,7 +10,7 @@ import {
 } from "~/types/schema";
 import { classifyTicket } from "~/services/ticket-classifier";
 import { isTicketStatus } from "~/utils";
-import type { TicketListFilters } from "~/utils";
+import { TICKET_LIST_PAGE_SIZE, type TicketListFilters } from "~/utils";
 import { db } from "./database";
 import { getErrorMessage, type Result } from "~/utils";
 
@@ -115,16 +115,43 @@ function buildListTicketsWhere(
   return { AND: conditions } as TicketWhereInput;
 }
 
+export type TicketListPage = {
+  tickets: Ticket[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 // Listar los tickets
 export async function listTickets(
   filters?: TicketListFilters,
-): Promise<Result<Ticket[]>> {
+): Promise<Result<TicketListPage>> {
   try {
+    const where = buildListTicketsWhere(filters);
+    const requestedPage = filters?.page ?? 1;
+    const pageSize = TICKET_LIST_PAGE_SIZE;
+
+    const total = await db.ticket.count({ where });
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const page = total === 0 ? 1 : Math.min(requestedPage, totalPages);
+    const skip = (page - 1) * pageSize;
+
     const tickets = await db.ticket.findMany({
-      where: buildListTicketsWhere(filters),
+      where,
       orderBy: { createdAt: "desc" },
+      skip,
+      take: pageSize,
     });
-    return { ok: true, data: tickets };
+
+    return {
+      ok: true,
+      data: {
+        tickets,
+        total,
+        page,
+        pageSize,
+      },
+    };
   } catch (error) {
     return {
       ok: false,

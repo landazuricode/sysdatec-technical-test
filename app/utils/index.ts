@@ -23,6 +23,17 @@ export function getErrorMessage(error: unknown): string {
   return "Error inesperado";
 }
 
+// Formatear fecha ISO en locale es-CO
+export function formatDate(
+  iso: string,
+  options?: { dateStyle?: "short" | "medium" | "long" | "full" },
+) {
+  return new Intl.DateTimeFormat("es-CO", {
+    dateStyle: options?.dateStyle ?? "short",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
+
 export const TICKET_CATEGORIES = [
   "FINANZAS",
   "LEGAL",
@@ -60,11 +71,14 @@ export function isTicketStatus(value: string): value is TicketStatus {
   return (TICKET_STATUSES as readonly string[]).includes(value);
 }
 
+export const TICKET_LIST_PAGE_SIZE = 10;
+
 export type TicketListFilters = {
   search?: string;
   status?: string;
   priority?: TicketPriority;
   category?: TicketCategory;
+  page?: number;
 };
 
 // Parsear filtros de la URL del listado
@@ -88,15 +102,28 @@ export function parseTicketListFilters(
       ? statusParam
       : undefined;
 
-  return { search, status, priority, category };
+  const pageParam = searchParams.get("page")?.trim();
+  const parsedPage = pageParam ? Number.parseInt(pageParam, 10) : 1;
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  return { search, status, priority, category, page };
 }
 
 // Construir URL del listado con filtros
 export function buildTicketListUrl(
   current: URLSearchParams,
-  update: Partial<Record<"q" | "status" | "priority" | "category", string | null>>,
+  update: Partial<
+    Record<"q" | "status" | "priority" | "category" | "page", string | null>
+  >,
 ): string {
   const params = new URLSearchParams(current);
+
+  const touchesFilter = ["q", "status", "priority", "category"].some(
+    (key) => key in update,
+  );
+  if (touchesFilter) {
+    params.delete("page");
+  }
 
   for (const [key, value] of Object.entries(update)) {
     if (value === null || value === undefined || value === "") {

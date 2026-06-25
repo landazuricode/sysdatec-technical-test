@@ -76,7 +76,7 @@ export default function AppLayout() {
           isMobileSidebarOpen={isMobileSidebarOpen}
         />
 
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </main>
       </div>
