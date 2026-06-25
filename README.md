@@ -2,7 +2,6 @@
 
 [➡️ Ver vídeo de presentación de la prueba técnica](https://youtu.be/jQ8LKOEUgZI)
 
-
 Prueba técnica para **Sysdatec Corp**: sistema ligero de gestión de tickets operativos con clasificación automática mediante OpenAI. Los usuarios crean solicitudes, la IA asigna categoría, prioridad y resumen, y el equipo hace seguimiento desde un panel central.
 
 ---
@@ -16,7 +15,7 @@ Prueba técnica para **Sysdatec Corp**: sistema ligero de gestión de tickets op
 
 ## Configuración e inicio rápido
 
-El evaluador puede levantar el proyecto desde cero con:
+Puedes levantar el proyecto desde cero con:
 
 ```bash
 # 1. Clonar el repositorio
@@ -37,26 +36,38 @@ Al arrancar, el contenedor ejecuta automáticamente las migraciones de Prisma (`
 
 ### Variables de entorno (`.env.example`)
 
-| Variable | Descripción | Requerida |
-|----------|-------------|-----------|
-| `DATABASE_URL` | URL de conexión PostgreSQL | Sí |
-| `OPENAI_API_KEY` | API key de OpenAI para clasificación | Sí (para IA) |
-| `OPENAI_MODEL` | Modelo a usar (default: `gpt-4o-mini`) | No |
+| Variable         | Descripción                            | Requerida    |
+| ---------------- | -------------------------------------- | ------------ |
+| `DATABASE_URL`   | URL de conexión PostgreSQL             | Sí           |
+| `OPENAI_API_KEY` | API key de OpenAI para clasificación   | Sí (para IA) |
+| `OPENAI_MODEL`   | Modelo a usar (default: `gpt-4o-mini`) | No           |
 
 Con Docker Compose, `DATABASE_URL` se configura automáticamente en el servicio `app`. Solo necesitas definir `OPENAI_API_KEY` en tu archivo `.env` local.
 
 ---
 
+## Uso de IA
+
+La clasificación automática se realiza al momento de crear un ticket.
+
+Se utiliza OpenAI Chat Completions para analizar el texto de la solicitud y generar: categoría, prioridad y resumen breve de la solicitud
+
+El modelo recibe el contenido del ticket y responde en formato estructurado para garantizar consistencia en los datos almacenados.
+
+La clasificación ocurre antes de persistir el ticket en la base de datos, por lo que toda solicitud queda registrada junto con su categoría, prioridad y resumen generados por IA.
+
+---
+
 ## Funcionalidades implementadas
 
-| Requisito | Implementación |
-|-----------|----------------|
-| Creación de tickets | Formulario en `/tickets/new` con nombre del cliente, texto de solicitud y URL de adjunto opcional |
-| Clasificación por IA | OpenAI Chat Completions: categoría, prioridad y resumen breve al crear el ticket |
-| Panel de control | Listado en `/` con estado, categoría, prioridad y fecha de creación |
-| Detalle del ticket | Actualizar estado, asignar responsable y agregar comentarios en `/tickets/:id` |
-| Reportes y métricas | Panel en `/reports` con KPIs y gráficos (Recharts): tendencia mensual, distribución por estado, categoría, prioridad, clasificación IA y carga por responsable |
-| Copiloto IA | Chat conversacional con streaming y *function calling* en `/chat` |
+| Requisito            | Implementación                                                                                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Creación de tickets  | Formulario en `/tickets/new` con nombre del cliente, texto de solicitud y URL de adjunto opcional                                                              |
+| Clasificación por IA | OpenAI Chat Completions: categoría, prioridad y resumen breve al crear el ticket                                                                               |
+| Panel de control     | Listado en `/` con estado, categoría, prioridad y fecha de creación                                                                                            |
+| Detalle del ticket   | Actualizar estado, asignar responsable y agregar comentarios en `/tickets/:id`                                                                                 |
+| Reportes y métricas  | Panel en `/reports` con KPIs y gráficos (Recharts): tendencia mensual, distribución por estado, categoría, prioridad, clasificación IA y carga por responsable |
+| Copiloto IA          | Chat conversacional con streaming y _function calling_ en `/chat`                                                                                              |
 
 **Categorías:** Finanzas, Legal, Compras, Operaciones  
 **Prioridades:** Alta, Media, Baja  
@@ -66,21 +77,21 @@ Con Docker Compose, `DATABASE_URL` se configura automáticamente en el servicio 
 
 ## Copiloto IA (chat con streaming)
 
-En `/chat` hay un asistente conversacional tipo ChatGPT que opera el sistema con lenguaje natural. No es un chatbot decorativo: usa *function calling* para ejecutar acciones reales sobre los tickets reutilizando la capa de datos del proyecto.
+En `/chat` hay un asistente conversacional tipo ChatGPT que opera el sistema con lenguaje natural. No es un chatbot decorativo: usa _function calling_ para ejecutar acciones reales sobre los tickets reutilizando la capa de datos del proyecto.
 
 **Capacidades (herramientas que la IA puede invocar):**
 
-| Herramienta | Acción |
-|-------------|--------|
-| `search_tickets` | Buscar y listar tickets con filtros (estado, prioridad, categoría, texto) |
-| `get_ticket` | Ver el detalle de un ticket por su número (`#12`) |
-| `get_stats` | Estadísticas globales por estado, prioridad y categoría |
-| `get_workload` | Carga de trabajo por responsable |
-| `list_assignees` | Listar responsables registrados |
-| `create_ticket` | Crear un ticket (con clasificación IA automática) |
-| `update_ticket_status` | Cambiar el estado de un ticket |
-| `assign_ticket` | Asignar o reasignar un responsable |
-| `add_comment` | Agregar un comentario |
+| Herramienta            | Acción                                                                    |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `search_tickets`       | Buscar y listar tickets con filtros (estado, prioridad, categoría, texto) |
+| `get_ticket`           | Ver el detalle de un ticket por su número (`#12`)                         |
+| `get_stats`            | Estadísticas globales por estado, prioridad y categoría                   |
+| `get_workload`         | Carga de trabajo por responsable                                          |
+| `list_assignees`       | Listar responsables registrados                                           |
+| `create_ticket`        | Crear un ticket (con clasificación IA automática)                         |
+| `update_ticket_status` | Cambiar el estado de un ticket                                            |
+| `assign_ticket`        | Asignar o reasignar un responsable                                        |
+| `add_comment`          | Agregar un comentario                                                     |
 
 **Características técnicas:**
 
@@ -118,11 +129,11 @@ En `/chat` hay un asistente conversacional tipo ChatGPT que opera el sistema con
 
 ### Stack tecnológico
 
-| Capa | Tecnología |
-|------|------------|
-| Frontend + SSR | React 19, React Router 8, Tailwind CSS 4 |
-| Base de datos | PostgreSQL 16, Prisma 7 |
-| IA | OpenAI Chat Completions API (`gpt-4o-mini` por defecto) |
-| Infraestructura | Docker, Docker Compose |
+| Capa            | Tecnología                                              |
+| --------------- | ------------------------------------------------------- |
+| Frontend + SSR  | React 19, React Router 8, Tailwind CSS 4                |
+| Base de datos   | PostgreSQL 16, Prisma 7                                 |
+| IA              | OpenAI Chat Completions API (`gpt-4o-mini` por defecto) |
+| Infraestructura | Docker, Docker Compose                                  |
 
 ---
