@@ -193,9 +193,22 @@ button {
 
 .ticket-mdx-editor-toolbar {
   border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-surface);
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary-subtle) 55%,
+    transparent
+  ) !important;
   padding: 0.25rem 0.5rem;
   border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.ticket-mdx-editor-toolbar svg {
+  color: var(--color-muted-foreground) !important;
+}
+
+.ticket-mdx-editor-toolbar button:hover svg,
+.ticket-mdx-editor-toolbar [data-state="on"] svg {
+  color: var(--color-foreground) !important;
 }
 
 .ticket-mdx-editor-content {
@@ -295,6 +308,25 @@ button {
   color: var(--color-accent-info);
   text-decoration: underline;
   cursor: pointer;
+}
+
+html.dark .ticket-mdx-editor {
+  --basePageBg: var(--color-background);
+  --baseBase: var(--color-surface);
+  --baseBgSubtle: var(--color-primary-subtle);
+  --baseBg: color-mix(in srgb, var(--color-primary-subtle) 55%, transparent);
+  --baseBgHover: var(--color-border);
+  --baseBgActive: var(--color-border);
+  --baseLine: var(--color-border);
+  --baseBorder: var(--color-border);
+  --baseBorderHover: var(--color-muted-foreground);
+  --baseText: var(--color-muted-foreground);
+  --baseTextContrast: var(--color-foreground);
+}
+
+html.dark .ticket-mdx-editor-content {
+  color: var(--color-foreground) !important;
+  background-color: transparent;
 }
 
 .ticket-markdown-preview .wmde-markdown {

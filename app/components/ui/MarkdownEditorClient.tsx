@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTheme } from "~/hooks/useTheme";
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -24,6 +25,7 @@ export function MarkdownEditorClient({
   onChange,
   placeholder,
 }: MarkdownEditorClientProps) {
+  const { theme } = useTheme();
   const plugins = useMemo(
     () => [
       headingsPlugin({ allowedHeadingLevels: [1, 2, 3, 4] }),
@@ -51,7 +53,7 @@ export function MarkdownEditorClient({
       onChange={onChange}
       placeholder={placeholder}
       plugins={plugins}
-      className="ticket-mdx-editor"
+      className={`ticket-mdx-editor${theme === "dark" ? " dark-theme" : ""}`}
       contentEditableClassName="ticket-mdx-editor-content"
     />
   );
