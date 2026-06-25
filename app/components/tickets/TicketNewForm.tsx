@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Form, Link, useActionData, useNavigation } from "react-router";
 import { Loader2 } from "lucide-react";
+import { MarkdownEditor } from "~/components/ui/MarkdownEditor";
 
 type ActionData = {
   ok: false;
@@ -53,7 +54,7 @@ export function TicketNewForm() {
     <div className="mx-auto p-0 w-full">
       <header className="mb-3 w-full">
         <h2 className="text-2xl font-bold tracking-tight">
-          Registro de solicitud
+          Registro de ticket
         </h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Complete los campos requeridos para crear un ticket. El sistema
@@ -85,6 +86,7 @@ export function TicketNewForm() {
                   type="text"
                   autoComplete="off"
                   required
+                  autoFocus
                   value={clientName}
                   onChange={(event) => setClientName(event.target.value)}
                   className={fieldInputClass}
@@ -97,15 +99,12 @@ export function TicketNewForm() {
                   Solicitud
                   <span className="ml-1 text-accent-danger">*</span>
                 </label>
-                <textarea
+                <MarkdownEditor
                   id="requestText"
                   name="requestText"
-                  required
-                  rows={6}
-                  autoComplete="off"
                   value={requestText}
-                  onChange={(event) => setRequestText(event.target.value)}
-                  className={`${fieldInputClass} resize-y`}
+                  onChange={setRequestText}
+                  editorKey={actionData?.code ?? "new"}
                   placeholder="Describa el requerimiento, antecedentes y acción esperada..."
                 />
               </div>

@@ -1,5 +1,6 @@
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { Sparkles } from "lucide-react";
+import { MarkdownContent } from "~/components/ui/MarkdownContent";
 import {
   TicketStatus,
   type ClassificationStatus,
@@ -125,9 +126,9 @@ export function TicketDetails() {
         <div className="mt-6 space-y-4">
           <div>
             <h3 className="text-sm font-medium">Solicitud</h3>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-              {ticket.requestText}
-            </p>
+            <div className="mt-2">
+              <MarkdownContent content={ticket.requestText} />
+            </div>
           </div>
 
           {ticket.summary && (

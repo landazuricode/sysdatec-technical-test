@@ -15,10 +15,12 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@mdxeditor/editor": "^4.0.4",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@react-router/node": "8.0.0",
     "@react-router/serve": "8.0.0",
+    "@uiw/react-markdown-preview": "^5.2.1",
     "isbot": "^5.1.36",
     "lucide-react": "^1.21.0",
     "nprogress": "^0.2.0",
