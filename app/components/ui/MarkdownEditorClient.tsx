@@ -1,3 +1,4 @@
+import "~/lib/prism-global";
 import { useMemo } from "react";
 import { useTheme } from "~/hooks/useTheme";
 import {
