@@ -1,5 +1,8 @@
 # Sysdatec — Gestión de tickets con IA
 
+[➡️ Ver vídeo de presentación de la prueba técnica](https://youtu.be/jQ8LKOEUgZI)
+
+
 Prueba técnica para **Sysdatec Corp**: sistema ligero de gestión de tickets operativos con clasificación automática mediante OpenAI. Los usuarios crean solicitudes, la IA asigna categoría, prioridad y resumen, y el equipo hace seguimiento desde un panel central.
 
 ---
