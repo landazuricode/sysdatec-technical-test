@@ -1,5 +1,4 @@
-import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
-import { Sparkles } from "lucide-react";
+import { Form, Link, useActionData, useLoaderData, useNavigation } from "react-router";
 import { MarkdownContent } from "~/components/ui/MarkdownContent";
 import {
   TicketStatus,
@@ -41,9 +40,25 @@ const ticketStatusOptions = Object.values(TicketStatus).map((value) => ({
   label: ticketStatusLabels[value],
 }));
 
-type TicketDetailsProps = {
-  ticket: SerializedTicket;
-};
+const fieldInputClass =
+  "mt-1.5 w-full rounded-lg border border-border bg-primary-subtle/40 px-4 py-2.5 text-sm outline-none transition-[border-color,background-color] duration-200 placeholder:text-muted-foreground focus:border-foreground/20 focus:bg-background focus:outline-none focus:ring-2 focus:ring-foreground/5 focus-visible:outline-none";
+
+const panelClass = "rounded-lg border border-border bg-surface shadow-sm";
+
+function PropertyRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[7.5rem_1fr] gap-3 border-b border-border py-3 text-sm last:border-b-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 font-medium">{children}</dd>
+    </div>
+  );
+}
 
 type ActionData =
   | { ok: true; intent: string }
@@ -59,249 +74,308 @@ export function TicketDetails() {
     ticket.classificationStatus === "PENDIENTE";
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-surface p-6 sm:p-8">
-        <p className="text-sm text-muted-foreground">Ticket #{ticket.id}</p>
-        <h2 className="mt-1 text-2xl font-semibold">{ticket.clientName}</h2>
+    <div className="w-full">
+      <Link
+        to="/"
+        className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+      >
+        ← Volver a tickets
+      </Link>
 
-        <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Clasificación IA
-            </dt>
-            <dd className="mt-1 text-sm font-medium">
-              {classificationStatusLabels[ticket.classificationStatus]}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Estado
-            </dt>
-            <dd className="mt-1 text-sm font-medium">
-              {ticketStatusLabels[ticket.status]}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Categoría
-            </dt>
-            <dd className="mt-1 text-sm font-medium">
-              {ticket.category
-                ? ticketCategoryLabels[ticket.category]
-                : "Sin clasificar"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Prioridad
-            </dt>
-            <dd className="mt-1 text-sm font-medium">
-              {ticket.priority
-                ? ticketPriorityLabels[ticket.priority]
-                : "Sin clasificar"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Responsable
-            </dt>
-            <dd className="mt-1 text-sm font-medium">
-              {ticket.assignee ?? "Sin asignar"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Creado
-            </dt>
-            <dd className="mt-1 text-sm">{formatDate(ticket.createdAt, { dateStyle: "medium" })}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Actualizado
-            </dt>
-            <dd className="mt-1 text-sm">{formatDate(ticket.updatedAt, { dateStyle: "medium" })}</dd>
-          </div>
-        </dl>
-
-        <div className="mt-6 space-y-4">
-          <div>
-            <h3 className="text-sm font-medium">Solicitud</h3>
-            <div className="mt-2">
-              <MarkdownContent content={ticket.requestText} />
-            </div>
-          </div>
-
-          {ticket.summary && (
-            <div>
-              <h3 className="text-sm font-medium">Resumen IA</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {ticket.summary}
-              </p>
+      <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className={panelClass}>
+          {actionData && !actionData.ok && (
+            <div
+              role="alert"
+              className="border-b border-accent-danger/30 bg-accent-danger-subtle px-6 py-3 text-sm text-accent-danger"
+            >
+              {actionData.error}
             </div>
           )}
 
-          {ticket.classificationStatus === "FALLIDA" &&
-            ticket.classificationError && (
-              <div className="rounded-lg border border-accent-danger/30 bg-accent-danger-subtle px-4 py-3">
-                <h3 className="text-sm font-medium text-accent-danger">
-                  Error de clasificación
-                </h3>
-                <p className="mt-1 text-sm text-accent-danger/90">
-                  {ticket.classificationError}
+          <header className="border-b border-border px-6 py-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">
+                  Ticket #{ticket.id}
                 </p>
+                <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
+                  {ticket.clientName}
+                </h2>
               </div>
+              <dl className="shrink-0 space-y-1 text-sm sm:text-right">
+                <div>
+                  <dt className="inline text-muted-foreground after:content-[':'] sm:block sm:after:content-none">
+                    Creado
+                  </dt>{" "}
+                  <dd className="inline font-medium sm:block">
+                    <time dateTime={ticket.createdAt}>
+                      {formatDate(ticket.createdAt, { dateStyle: "medium" })}
+                    </time>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="inline text-muted-foreground after:content-[':'] sm:block sm:after:content-none">
+                    Actualizado
+                  </dt>{" "}
+                  <dd className="inline font-medium sm:block">
+                    <time dateTime={ticket.updatedAt}>
+                      {formatDate(ticket.updatedAt, { dateStyle: "medium" })}
+                    </time>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </header>
+
+          <div className="space-y-6 px-6 py-5">
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Solicitud
+              </h3>
+              <div className="mt-3 text-sm leading-relaxed">
+                <MarkdownContent content={ticket.requestText} />
+              </div>
+            </section>
+
+            {ticket.summary && (
+              <section className="border-l-2 border-border pl-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Resumen
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {ticket.summary}
+                </p>
+              </section>
             )}
 
-          {canRetryClassification && (
-            <Form method="post">
-              <input type="hidden" name="intent" value="retryClassification" />
+            {ticket.classificationStatus === "FALLIDA" &&
+              ticket.classificationError && (
+                <div className="border border-accent-danger/30 bg-accent-danger-subtle px-4 py-3 text-sm">
+                  <p className="font-medium text-accent-danger">
+                    Clasificación no completada
+                  </p>
+                  <p className="mt-1 text-accent-danger/90">
+                    {ticket.classificationError}
+                  </p>
+                </div>
+              )}
+
+            {ticket.attachmentUrl && (
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Adjunto
+                </h3>
+                <a
+                  href={ticket.attachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block text-sm text-foreground underline underline-offset-2 hover:text-muted-foreground"
+                >
+                  {ticket.attachmentUrl}
+                </a>
+              </section>
+            )}
+
+            {canRetryClassification && (
+              <Form method="post">
+                <input type="hidden" name="intent" value="retryClassification" />
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="text-sm font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground disabled:opacity-60"
+                >
+                  {isSubmitting
+                    ? "Procesando clasificación..."
+                    : "Reintentar clasificación"}
+                </button>
+              </Form>
+            )}
+          </div>
+
+          <section className="border-t border-border">
+            <div className="border-b border-border px-6 py-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Comentarios
+                {ticket.comments && ticket.comments.length > 0 && (
+                  <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground/80">
+                    ({ticket.comments.length})
+                  </span>
+                )}
+              </h3>
+            </div>
+
+            {ticket.comments && ticket.comments.length > 0 ? (
+              <ul className="divide-y divide-border">
+                {ticket.comments.map((comment: SerializedComment) => (
+                  <li key={comment.id} className="px-6 py-4">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {comment.author ?? "Sin autor"}
+                      </span>
+                      <span className="mx-1.5">·</span>
+                      <time dateTime={comment.createdAt}>
+                        {formatDate(comment.createdAt, { dateStyle: "medium" })}
+                      </time>
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
+                      {comment.content}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-6 py-5 text-sm text-muted-foreground">
+                No hay comentarios registrados.
+              </p>
+            )}
+
+            <Form
+              method="post"
+              className="space-y-4 border-t border-border bg-primary-subtle/25 px-6 py-4"
+            >
+              <input type="hidden" name="intent" value="addComment" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="author" className="text-sm font-medium">
+                    Autor
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      Opcional
+                    </span>
+                  </label>
+                  <input
+                    id="author"
+                    name="author"
+                    type="text"
+                    autoComplete="off"
+                    className={fieldInputClass}
+                    placeholder="Nombre"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="content" className="text-sm font-medium">
+                  Comentario
+                </label>
+                <textarea
+                  id="content"
+                  name="content"
+                  required
+                  rows={3}
+                  autoComplete="off"
+                  className={fieldInputClass}
+                  placeholder="Registre el avance o la resolución..."
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-60"
+                >
+                  {isSubmitting ? "Guardando..." : "Agregar comentario"}
+                </button>
+              </div>
+            </Form>
+          </section>
+        </div>
+
+        <aside className="space-y-4">
+          <div className={`${panelClass} p-5`}>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Propiedades
+            </h4>
+            <dl className="mt-1">
+              <PropertyRow label="Estado">
+                {ticketStatusLabels[ticket.status]}
+              </PropertyRow>
+              <PropertyRow label="Categoría">
+                {ticket.category
+                  ? ticketCategoryLabels[ticket.category]
+                  : "—"}
+              </PropertyRow>
+              <PropertyRow label="Prioridad">
+                {ticket.priority
+                  ? ticketPriorityLabels[ticket.priority]
+                  : "—"}
+              </PropertyRow>
+              <PropertyRow label="Clasificación">
+                <span
+                  className={
+                    ticket.classificationStatus === "FALLIDA"
+                      ? "text-accent-danger"
+                      : undefined
+                  }
+                >
+                  {classificationStatusLabels[ticket.classificationStatus]}
+                </span>
+              </PropertyRow>
+              <PropertyRow label="Responsable">
+                {ticket.assignee ?? "Sin asignar"}
+              </PropertyRow>
+            </dl>
+          </div>
+
+          <div className={`${panelClass} p-5`}>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Actualizar estado
+            </h4>
+            <Form method="post" className="mt-4">
+              <input type="hidden" name="intent" value="updateStatus" />
+              <label htmlFor="status" className="sr-only">
+                Estado del ticket
+              </label>
+              <select
+                id="status"
+                name="status"
+                autoComplete="off"
+                defaultValue={ticket.status}
+                className={fieldInputClass}
+              >
+                {ticketStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors hover:bg-primary-subtle disabled:opacity-60"
+                className="mt-3 w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-60"
               >
-                <Sparkles className="h-4 w-4" />
-                {isSubmitting ? "Clasificando..." : "Reintentar clasificación IA"}
+                Guardar
               </button>
             </Form>
-          )}
-
-          {ticket.attachmentUrl && (
-            <div>
-              <h3 className="text-sm font-medium">Adjunto</h3>
-              <a
-                href={ticket.attachmentUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-sm text-accent-info underline"
-              >
-                Ver archivo adjunto
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {actionData && !actionData.ok && (
-        <p className="rounded-lg border border-accent-danger/30 bg-accent-danger-subtle px-4 py-3 text-sm text-accent-danger">
-          {actionData.error}
-        </p>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Form
-          method="post"
-          className="rounded-xl border border-border bg-surface p-6"
-        >
-          <input type="hidden" name="intent" value="updateStatus" />
-          <h3 className="text-sm font-semibold">Actualizar estado</h3>
-          <select
-            name="status"
-            defaultValue={ticket.status}
-            className="mt-4 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground"
-          >
-            {ticketStatusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
-          >
-            Guardar estado
-          </button>
-        </Form>
-
-        <Form
-          method="post"
-          className="rounded-xl border border-border bg-surface p-6"
-        >
-          <input type="hidden" name="intent" value="updateAssignee" />
-          <h3 className="text-sm font-semibold">Asignar responsable</h3>
-          <input
-            name="assignee"
-            type="text"
-            defaultValue={ticket.assignee ?? ""}
-            placeholder="Nombre del responsable"
-            className="mt-4 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground"
-          />
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
-          >
-            Guardar responsable
-          </button>
-        </Form>
-      </div>
-
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <h3 className="text-sm font-semibold">Comentarios</h3>
-
-        {ticket.comments && ticket.comments.length > 0 ? (
-          <ul className="mt-4 space-y-3">
-            {ticket.comments.map((comment: SerializedComment) => (
-              <li
-                key={comment.id}
-                className="rounded-lg border border-border bg-primary-subtle/30 px-4 py-3"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>{comment.author ?? "Anónimo"}</span>
-                  <time dateTime={comment.createdAt}>
-                    {formatDate(comment.createdAt, { dateStyle: "medium" })}
-                  </time>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm">
-                  {comment.content}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Aún no hay comentarios en este ticket.
-          </p>
-        )}
-
-        <Form method="post" className="mt-6 space-y-4 border-t border-border pt-6">
-          <input type="hidden" name="intent" value="addComment" />
-          <div>
-            <label htmlFor="author" className="block text-sm font-medium">
-              Autor{" "}
-              <span className="font-normal text-muted-foreground">(opcional)</span>
-            </label>
-            <input
-              id="author"
-              name="author"
-              type="text"
-              className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground"
-              placeholder="Tu nombre"
-            />
           </div>
-          <div>
-            <label htmlFor="content" className="block text-sm font-medium">
-              Comentario
-            </label>
-            <textarea
-              id="content"
-              name="content"
-              required
-              rows={3}
-              className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground"
-              placeholder="Escribe un comentario..."
-            />
+
+          <div className={`${panelClass} p-5`}>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Asignar responsable
+            </h4>
+            <Form method="post" className="mt-4">
+              <input type="hidden" name="intent" value="updateAssignee" />
+              <label htmlFor="assignee" className="sr-only">
+                Responsable
+              </label>
+              <input
+                id="assignee"
+                name="assignee"
+                type="text"
+                autoComplete="off"
+                defaultValue={ticket.assignee ?? ""}
+                placeholder="Nombre del responsable"
+                className={fieldInputClass}
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-3 w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition-colors hover:bg-primary-subtle disabled:opacity-60"
+              >
+                Guardar
+              </button>
+            </Form>
           </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
-          >
-            Agregar comentario
-          </button>
-        </Form>
+        </aside>
       </div>
     </div>
   );
