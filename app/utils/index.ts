@@ -73,6 +73,11 @@ export function isTicketStatus(value: string): value is TicketStatus {
 
 export const TICKET_LIST_PAGE_SIZE = 10;
 
+// Formatear número de seguimiento del ticket (ej. 1 → 0001)
+export function formatTicketNumber(ticketNumber: number): string {
+  return String(ticketNumber).padStart(4, "0");
+}
+
 export type TicketListFilters = {
   search?: string;
   status?: string;

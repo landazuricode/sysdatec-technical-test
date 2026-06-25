@@ -37,8 +37,16 @@ enum ClassificationStatus {
   FALLIDA
 }
 
+model Assignee {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+}
+
 model Ticket {
   id                   String               @id @default(cuid())
+  ticketNumber         Int                  @unique @default(autoincrement())
   clientName           String
   requestText          String
   attachmentUrl        String?
@@ -49,7 +57,8 @@ model Ticket {
   classificationError  String?
   classifiedAt         DateTime?
   status               TicketStatus         @default(ABIERTO)
-  assignee             String?
+  assigneeId           String?
+  assignee             Assignee?            @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
   comments             Comment[]
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
@@ -58,6 +67,7 @@ model Ticket {
   @@index([category])
   @@index([priority])
   @@index([createdAt])
+  @@index([ticketNumber])
 }
 
 model Comment {

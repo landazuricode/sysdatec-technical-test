@@ -1,13 +1,17 @@
 import { Form, Link, useActionData, useLoaderData, useNavigation } from "react-router";
+import { MessageSquare } from "lucide-react";
+import { AssigneeSelect } from "~/components/tickets/AssigneeSelect";
 import { MarkdownContent } from "~/components/ui/MarkdownContent";
+import { useUserName, getUserInitials } from "~/hooks/useUserName";
 import {
   TicketStatus,
   type ClassificationStatus,
   type TicketCategory,
   type TicketPriority,
 } from "~/types/schema";
+import type { Assignee } from "~/types/schema";
 import type { SerializedComment, SerializedTicket } from "~/utils/serializers";
-import { formatDate } from "~/utils";
+import { formatDate, formatTicketNumber } from "~/utils";
 
 const classificationStatusLabels: Record<ClassificationStatus, string> = {
   PENDIENTE: "Pendiente",
@@ -43,7 +47,7 @@ const ticketStatusOptions = Object.values(TicketStatus).map((value) => ({
 const fieldInputClass =
   "mt-1.5 w-full rounded-lg border border-border bg-primary-subtle/40 px-4 py-2.5 text-sm outline-none transition-[border-color,background-color] duration-200 placeholder:text-muted-foreground focus:border-foreground/20 focus:bg-background focus:outline-none focus:ring-2 focus:ring-foreground/5 focus-visible:outline-none";
 
-const panelClass = "rounded-lg border border-border bg-surface shadow-sm";
+const panelClass = "rounded-xl border border-border bg-surface shadow-sm";
 
 function PropertyRow({
   label,
@@ -60,14 +64,29 @@ function PropertyRow({
   );
 }
 
+function CommentAvatar({ name }: { name: string }) {
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-foreground"
+      aria-hidden
+    >
+      {getUserInitials(name)}
+    </span>
+  );
+}
+
 type ActionData =
   | { ok: true; intent: string }
   | { ok: false; error: string; intent: string };
 
 export function TicketDetails() {
-  const { ticket } = useLoaderData<{ ticket: SerializedTicket }>();
+  const { ticket, assignees } = useLoaderData<{
+    ticket: SerializedTicket;
+    assignees: Assignee[];
+  }>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
+  const { userName } = useUserName();
   const isSubmitting = navigation.state === "submitting";
   const canRetryClassification =
     ticket.classificationStatus === "FALLIDA" ||
@@ -96,10 +115,13 @@ export function TicketDetails() {
           <header className="border-b border-border px-6 py-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">
-                  Ticket #{ticket.id}
-                </p>
-                <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-lg border border-border bg-primary-subtle/60 px-2.5 py-1 font-mono text-xs font-semibold tracking-wider text-foreground">
+                    #{formatTicketNumber(ticket.ticketNumber)}
+                  </span>
+                  <p className="text-sm text-muted-foreground">Ticket de seguimiento</p>
+                </div>
+                <h2 className="mt-2 text-xl font-semibold tracking-tight">
                   {ticket.clientName}
                 </h2>
               </div>
@@ -139,7 +161,7 @@ export function TicketDetails() {
             </section>
 
             {ticket.summary && (
-              <section className="border-l-2 border-border pl-4">
+              <section className="rounded-xl border border-border bg-primary-subtle/30 px-4 py-4">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Resumen
                 </h3>
@@ -151,7 +173,7 @@ export function TicketDetails() {
 
             {ticket.classificationStatus === "FALLIDA" &&
               ticket.classificationError && (
-                <div className="border border-accent-danger/30 bg-accent-danger-subtle px-4 py-3 text-sm">
+                <div className="rounded-xl border border-accent-danger/30 bg-accent-danger-subtle px-4 py-3 text-sm">
                   <p className="font-medium text-accent-danger">
                     Clasificación no completada
                   </p>
@@ -194,7 +216,8 @@ export function TicketDetails() {
           </div>
 
           <section className="border-t border-border">
-            <div className="border-b border-border px-6 py-4">
+            <div className="flex items-center gap-2 border-b border-border px-6 py-4">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Comentarios
                 {ticket.comments && ticket.comments.length > 0 && (
@@ -206,52 +229,67 @@ export function TicketDetails() {
             </div>
 
             {ticket.comments && ticket.comments.length > 0 ? (
-              <ul className="divide-y divide-border">
-                {ticket.comments.map((comment: SerializedComment) => (
-                  <li key={comment.id} className="px-6 py-4">
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">
-                        {comment.author ?? "Sin autor"}
-                      </span>
-                      <span className="mx-1.5">·</span>
-                      <time dateTime={comment.createdAt}>
-                        {formatDate(comment.createdAt, { dateStyle: "medium" })}
-                      </time>
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
-                      {comment.content}
-                    </p>
-                  </li>
-                ))}
+              <ul className="space-y-3 px-6 py-5">
+                {ticket.comments.map((comment: SerializedComment) => {
+                  const authorName = comment.author ?? "Sin autor";
+
+                  return (
+                    <li
+                      key={comment.id}
+                      className="flex gap-3 rounded-xl border border-border bg-primary-subtle/25 p-4"
+                    >
+                      <CommentAvatar name={authorName} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <span className="text-sm font-semibold text-foreground">
+                            {authorName}
+                          </span>
+                          <time
+                            dateTime={comment.createdAt}
+                            className="text-xs text-muted-foreground"
+                          >
+                            {formatDate(comment.createdAt, { dateStyle: "medium" })}
+                          </time>
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                          {comment.content}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
-              <p className="px-6 py-5 text-sm text-muted-foreground">
-                No hay comentarios registrados.
-              </p>
+              <div className="mx-6 my-5 rounded-xl border border-dashed border-border bg-primary-subtle/20 px-4 py-8 text-center">
+                <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No hay comentarios registrados.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  Agregue el primer comentario para documentar el seguimiento.
+                </p>
+              </div>
             )}
 
             <Form
               method="post"
-              className="space-y-4 border-t border-border bg-primary-subtle/25 px-6 py-4"
+              className="space-y-4 border-t border-border bg-primary-subtle/20 px-6 py-5"
             >
               <input type="hidden" name="intent" value="addComment" />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="author" className="text-sm font-medium">
-                    Autor
-                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                      Opcional
-                    </span>
-                  </label>
-                  <input
-                    id="author"
-                    name="author"
-                    type="text"
-                    autoComplete="off"
-                    className={fieldInputClass}
-                    placeholder="Nombre"
-                  />
-                </div>
+              <div>
+                <label htmlFor="author" className="text-sm font-medium">
+                  Autor
+                </label>
+                <input
+                  id="author"
+                  name="author"
+                  type="text"
+                  autoComplete="off"
+                  defaultValue={userName ?? ""}
+                  key={userName ?? "anonymous"}
+                  className={fieldInputClass}
+                  placeholder="Nombre"
+                />
               </div>
               <div>
                 <label htmlFor="content" className="text-sm font-medium">
@@ -286,6 +324,11 @@ export function TicketDetails() {
               Propiedades
             </h4>
             <dl className="mt-1">
+              <PropertyRow label="Número">
+                <span className="font-mono">
+                  #{formatTicketNumber(ticket.ticketNumber)}
+                </span>
+              </PropertyRow>
               <PropertyRow label="Estado">
                 {ticketStatusLabels[ticket.status]}
               </PropertyRow>
@@ -311,7 +354,7 @@ export function TicketDetails() {
                 </span>
               </PropertyRow>
               <PropertyRow label="Responsable">
-                {ticket.assignee ?? "Sin asignar"}
+                {ticket.assignee?.name ?? "Sin asignar"}
               </PropertyRow>
             </dl>
           </div>
@@ -357,14 +400,11 @@ export function TicketDetails() {
               <label htmlFor="assignee" className="sr-only">
                 Responsable
               </label>
-              <input
-                id="assignee"
-                name="assignee"
-                type="text"
-                autoComplete="off"
-                defaultValue={ticket.assignee ?? ""}
-                placeholder="Nombre del responsable"
-                className={fieldInputClass}
+              <AssigneeSelect
+                key={ticket.assignee?.id ?? "unassigned"}
+                assignees={assignees}
+                defaultValue={ticket.assignee?.name}
+                inputClass={fieldInputClass}
               />
               <button
                 type="submit"

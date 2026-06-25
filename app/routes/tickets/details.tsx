@@ -1,9 +1,7 @@
-import type {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-} from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { TicketDetails } from "~/components/tickets/TicketDetails";
 import { APP_NAME } from "~/config/constants";
+import { listAssignees } from "~/data/assignees";
 import { addComment } from "~/data/comments";
 import { serializeTicket } from "~/utils/serializers";
 import {
@@ -26,17 +24,26 @@ export default function Route() {
 }
 
 export async function loader({ params }: LoaderFunctionArgs) {
-  const result = await getTicketById(params.ticketId as string);
+  const [ticketResult, assigneesResult] = await Promise.all([
+    getTicketById(params.ticketId as string),
+    listAssignees(),
+  ]);
 
-  // Verificar si la obtención del ticket fue exitosa
-  if (!result.ok) {
-    if (result.code === "NOT_FOUND") {
-      throw new Response(result.error, { status: 404 });
+  if (!ticketResult.ok) {
+    if (ticketResult.code === "NOT_FOUND") {
+      throw new Response(ticketResult.error, { status: 404 });
     }
-    throw new Response(result.error, { status: 500 });
+    throw new Response(ticketResult.error, { status: 500 });
   }
 
-  return { ticket: serializeTicket(result.data) };
+  if (!assigneesResult.ok) {
+    throw new Response(assigneesResult.error, { status: 500 });
+  }
+
+  return {
+    ticket: serializeTicket(ticketResult.data),
+    assignees: assigneesResult.data,
+  };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {

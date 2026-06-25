@@ -16,6 +16,7 @@ import type { TicketStats } from "~/data/tickets";
 import {
   buildTicketListUrl,
   formatDate,
+  formatTicketNumber,
   hasActiveListFilters,
   type TicketListFilters,
 } from "~/utils";
@@ -171,7 +172,7 @@ export function TicketDashboard() {
             type="search"
             name="q"
             defaultValue={filters.search ?? ""}
-            placeholder="Buscar ticket..."
+            placeholder="Buscar por número, cliente o solicitud..."
             autoComplete="off"
             className="w-full rounded-xl border border-border bg-primary-subtle/40 py-3 pr-4 pl-10 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-muted-foreground focus:border-foreground/20 focus:bg-background focus:outline-none focus:ring-2 focus:ring-foreground/5 focus-visible:outline-none"
           />
@@ -285,9 +286,12 @@ export function TicketDashboard() {
         ) : (
           <>
             <div className="min-h-0 flex-1 overflow-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
+              <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-surface text-muted-foreground">
+                    <th className="sticky top-0 z-10 bg-surface px-3 py-3 font-medium">
+                      Nº
+                    </th>
                     <th className="sticky top-0 z-10 bg-surface px-3 py-3 font-medium">
                       Cliente
                     </th>
@@ -311,6 +315,14 @@ export function TicketDashboard() {
                       key={ticket.id}
                       className="border-b border-border/70 transition-colors hover:bg-primary-subtle/40"
                     >
+                      <td className="px-3 py-3">
+                        <Link
+                          to={`/tickets/${ticket.id}`}
+                          className="font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          #{formatTicketNumber(ticket.ticketNumber)}
+                        </Link>
+                      </td>
                       <td className="px-3 py-3">
                         <Link
                           to={`/tickets/${ticket.id}`}

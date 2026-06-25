@@ -11,6 +11,7 @@ import {
 import { classifyTicket } from "~/services/ticket-classifier";
 import { isTicketStatus } from "~/utils";
 import { TICKET_LIST_PAGE_SIZE, type TicketListFilters } from "~/utils";
+import { findOrCreateAssignee } from "./assignees";
 import { db } from "./database";
 import { getErrorMessage, type Result } from "~/utils";
 
@@ -81,14 +82,20 @@ function buildListTicketsWhere(
 
   const conditions: TicketWhereInput[] = [];
 
-  // Buscar por nombre del cliente o texto de la solicitud
+  // Buscar por número, cliente o texto de la solicitud
   if (filters.search) {
-    conditions.push({
-      OR: [
-        { clientName: { contains: filters.search } },
-        { requestText: { contains: filters.search } },
-      ],
-    });
+    const searchConditions: TicketWhereInput[] = [
+      { clientName: { contains: filters.search } },
+      { requestText: { contains: filters.search } },
+    ];
+
+    const numericQuery = filters.search.replace(/^#/, "").replace(/^0+/, "");
+    const ticketNumber = Number.parseInt(numericQuery, 10);
+    if (Number.isFinite(ticketNumber) && ticketNumber > 0) {
+      searchConditions.push({ ticketNumber: { equals: ticketNumber } });
+    }
+
+    conditions.push({ OR: searchConditions } as TicketWhereInput);
   }
 
   // Buscar por estado
@@ -138,6 +145,7 @@ export async function listTickets(
 
     const tickets = await db.ticket.findMany({
       where,
+      include: { assignee: true },
       orderBy: { createdAt: "desc" },
       skip,
       take: pageSize,
@@ -219,7 +227,7 @@ export async function getTicketStats(): Promise<Result<TicketStats>> {
     const [total, nuevos, enProgreso, resueltos] = await Promise.all([
       db.ticket.count(),
       db.ticket.count({
-        where: { status: TicketStatus.ABIERTO, assignee: null },
+        where: { status: TicketStatus.ABIERTO, assigneeId: null },
       }),
       db.ticket.count({ where: { status: TicketStatus.EN_PROGRESO } }),
       db.ticket.count({
@@ -250,6 +258,7 @@ export async function getTicketById(
     const ticket = await db.ticket.findUnique({
       where: { id },
       include: {
+        assignee: true,
         comments: { orderBy: { createdAt: "asc" } },
       },
     });
@@ -418,7 +427,7 @@ export async function updateTicketStatus(
 // Actualizar el asignado de un ticket
 export async function updateTicketAssignee(
   id: string,
-  assignee: string | null,
+  assigneeName: string | null,
 ): Promise<Result<Ticket>> {
   try {
     const existing = await db.ticket.findUnique({ where: { id } });
@@ -430,9 +439,19 @@ export async function updateTicketAssignee(
       };
     }
 
+    let assigneeId: string | null = null;
+    if (assigneeName?.trim()) {
+      const assigneeResult = await findOrCreateAssignee(assigneeName);
+      if (!assigneeResult.ok) {
+        return assigneeResult;
+      }
+      assigneeId = assigneeResult.data.id;
+    }
+
     const ticket = await db.ticket.update({
       where: { id },
-      data: { assignee: assignee?.trim() || null },
+      data: { assigneeId },
+      include: { assignee: true },
     });
     return { ok: true, data: ticket };
   } catch (error) {

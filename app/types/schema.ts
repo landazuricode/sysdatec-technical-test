@@ -41,6 +41,12 @@ export type ClassificationStatus =
 // ------------------------------------------------------------
 // Models
 // ------------------------------------------------------------
+export interface Assignee {
+  id: string;
+  name: string;
+  createdAt: Date;
+}
+
 export interface Comment {
   id: string;
   ticketId: string;
@@ -52,6 +58,7 @@ export interface Comment {
 
 export interface Ticket {
   id: string;
+  ticketNumber: number;
   clientName: string;
   requestText: string;
   attachmentUrl: string | null;
@@ -62,7 +69,8 @@ export interface Ticket {
   classificationError: string | null;
   classifiedAt: Date | null;
   status: TicketStatus;
-  assignee: string | null;
+  assigneeId: string | null;
+  assignee?: Assignee | null;
   createdAt: Date;
   updatedAt: Date;
   comments?: Comment[];
