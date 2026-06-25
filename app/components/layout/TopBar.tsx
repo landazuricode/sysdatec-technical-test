@@ -15,6 +15,7 @@ function getPageTitle(pathname: string) {
   if (pathname === "/") return "Panel de control";
   if (pathname === "/tickets/new") return "Nuevo ticket";
   if (pathname.startsWith("/tickets/")) return "Detalle del ticket";
+  if (pathname === "/reports") return "Reportes";
   return "Tickets";
 }
 

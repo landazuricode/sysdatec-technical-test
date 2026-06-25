@@ -52,6 +52,7 @@ Con Docker Compose, `DATABASE_URL` se configura automáticamente en el servicio 
 | Clasificación por IA | OpenAI Chat Completions: categoría, prioridad y resumen breve al crear el ticket |
 | Panel de control | Listado en `/` con estado, categoría, prioridad y fecha de creación |
 | Detalle del ticket | Actualizar estado, asignar responsable y agregar comentarios en `/tickets/:id` |
+| Reportes y métricas | Panel en `/reports` con KPIs y gráficos (Recharts): tendencia mensual, distribución por estado, categoría, prioridad, clasificación IA y carga por responsable |
 
 **Categorías:** Finanzas, Legal, Compras, Operaciones  
 **Prioridades:** Alta, Media, Baja  

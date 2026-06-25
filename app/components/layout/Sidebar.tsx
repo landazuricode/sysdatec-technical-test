@@ -24,6 +24,7 @@ import {
   Inbox,
   LayoutDashboard,
   Minus,
+  BarChart3,
   Plus,
   Scale,
   Settings,
@@ -35,6 +36,7 @@ import {
 const ticketLinks = [
   { to: "/", label: "Panel", icon: LayoutDashboard, end: true },
   { to: "/tickets/new", label: "Nuevo ticket", icon: Ticket, end: false },
+  { to: "/reports", label: "Reportes", icon: BarChart3, end: false },
 ] as const;
 
 type SidebarProps = {
