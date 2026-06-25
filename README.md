@@ -53,10 +53,45 @@ Con Docker Compose, `DATABASE_URL` se configura automáticamente en el servicio 
 | Panel de control | Listado en `/` con estado, categoría, prioridad y fecha de creación |
 | Detalle del ticket | Actualizar estado, asignar responsable y agregar comentarios en `/tickets/:id` |
 | Reportes y métricas | Panel en `/reports` con KPIs y gráficos (Recharts): tendencia mensual, distribución por estado, categoría, prioridad, clasificación IA y carga por responsable |
+| Copiloto IA | Chat conversacional con streaming y *function calling* en `/chat` |
 
 **Categorías:** Finanzas, Legal, Compras, Operaciones  
 **Prioridades:** Alta, Media, Baja  
 **Estados operativos:** Abierto, En progreso, Resuelto, Cerrado
+
+---
+
+## Copiloto IA (chat con streaming)
+
+En `/chat` hay un asistente conversacional tipo ChatGPT que opera el sistema con lenguaje natural. No es un chatbot decorativo: usa *function calling* para ejecutar acciones reales sobre los tickets reutilizando la capa de datos del proyecto.
+
+**Capacidades (herramientas que la IA puede invocar):**
+
+| Herramienta | Acción |
+|-------------|--------|
+| `search_tickets` | Buscar y listar tickets con filtros (estado, prioridad, categoría, texto) |
+| `get_ticket` | Ver el detalle de un ticket por su número (`#12`) |
+| `get_stats` | Estadísticas globales por estado, prioridad y categoría |
+| `get_workload` | Carga de trabajo por responsable |
+| `list_assignees` | Listar responsables registrados |
+| `create_ticket` | Crear un ticket (con clasificación IA automática) |
+| `update_ticket_status` | Cambiar el estado de un ticket |
+| `assign_ticket` | Asignar o reasignar un responsable |
+| `add_comment` | Agregar un comentario |
+
+**Características técnicas:**
+
+- **Streaming token a token** vía Server-Sent Events sobre la resource route `app/routes/api/chat.ts`.
+- **Loop de agente** en `app/services/chat-agent/`: la IA decide qué herramienta llamar, se ejecuta en el servidor, el resultado vuelve al modelo y este continúa hasta dar la respuesta final.
+- **Tarjetas de resultado** en el chat (tickets, tablas de carga, métricas) en lugar de solo texto.
+- **Conversaciones persistidas** en PostgreSQL (`Conversation` / `Message`), reabribles desde la lista lateral.
+
+**Ejemplos de uso:**
+
+- "¿Cuántos tickets de prioridad ALTA siguen abiertos?"
+- "Crea un ticket para Acme S.A.: no pueden generar la factura del mes."
+- "Asigna el ticket #12 a María y márcalo como en progreso."
+- "¿Cómo está repartida la carga entre los responsables?"
 
 ---
 

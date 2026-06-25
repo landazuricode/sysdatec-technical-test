@@ -250,6 +250,104 @@ export async function getTicketStats(): Promise<Result<TicketStats>> {
   }
 }
 
+// Obtener un ticket por su número de seguimiento
+export async function getTicketByNumber(
+  ticketNumber: number,
+): Promise<Result<TicketWithComments>> {
+  if (!Number.isFinite(ticketNumber) || ticketNumber <= 0) {
+    return { ok: false, error: "Número de ticket inválido", code: "VALIDATION" };
+  }
+
+  try {
+    const ticket = await db.ticket.findUnique({
+      where: { ticketNumber },
+      include: {
+        assignee: true,
+        comments: { orderBy: { createdAt: "asc" } },
+      },
+    });
+
+    if (!ticket) {
+      return {
+        ok: false,
+        error: `No existe el ticket #${ticketNumber}`,
+        code: "NOT_FOUND",
+      };
+    }
+
+    return { ok: true, data: ticket };
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error),
+      code: "DATABASE",
+    };
+  }
+}
+
+export type AssigneeWorkload = {
+  assigneeName: string;
+  abiertos: number;
+  enProgreso: number;
+  total: number;
+};
+
+// Obtener la carga de trabajo por responsable
+export async function getAssigneeWorkload(): Promise<Result<AssigneeWorkload[]>> {
+  try {
+    const grouped = await db.ticket.groupBy({
+      by: ["assigneeId", "status"],
+      where: {
+        assigneeId: { not: null },
+        status: { in: [TicketStatus.ABIERTO, TicketStatus.EN_PROGRESO] },
+      },
+      _count: { _all: true },
+    });
+
+    if (grouped.length === 0) {
+      return { ok: true, data: [] };
+    }
+
+    const assigneeIds = [
+      ...new Set(grouped.map((row) => row.assigneeId).filter(Boolean)),
+    ] as string[];
+
+    const assignees = await db.assignee.findMany({
+      where: { id: { in: assigneeIds } },
+    });
+    const nameById = new Map(assignees.map((a) => [a.id, a.name]));
+
+    const workloadByAssignee = new Map<string, AssigneeWorkload>();
+
+    for (const row of grouped) {
+      if (!row.assigneeId) continue;
+      const name = nameById.get(row.assigneeId) ?? "Desconocido";
+      const current =
+        workloadByAssignee.get(row.assigneeId) ??
+        ({ assigneeName: name, abiertos: 0, enProgreso: 0, total: 0 } as AssigneeWorkload);
+
+      const count = row._count._all;
+      if (row.status === TicketStatus.ABIERTO) current.abiertos += count;
+      if (row.status === TicketStatus.EN_PROGRESO) current.enProgreso += count;
+      current.total += count;
+
+      workloadByAssignee.set(row.assigneeId, current);
+    }
+
+    const workload = [...workloadByAssignee.values()].sort(
+      (a, b) => b.total - a.total,
+    );
+
+    return { ok: true, data: workload };
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error),
+      code: "DATABASE",
+    };
+  }
+}
+
 // Obtener un ticket por su ID
 export async function getTicketById(
   id: string,

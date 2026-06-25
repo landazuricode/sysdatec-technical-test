@@ -376,3 +376,41 @@ html.dark .ticket-mdx-editor-content {
   background-color: var(--color-primary-subtle);
   color: var(--color-foreground);
 }
+
+/* Markdown dentro del chat: ancho según contenido, sin estirar la burbuja */
+.chat-markdown-preview {
+  display: block;
+  max-width: 100%;
+}
+
+.chat-markdown-preview .wmde-markdown {
+  background-color: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  padding: 0;
+  min-width: 0;
+}
+
+.chat-markdown-preview .wmde-markdown > :first-child {
+  margin-top: 0;
+}
+
+.chat-markdown-preview .wmde-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown-preview .wmde-markdown p {
+  margin: 0.35em 0;
+}
+
+.chat-markdown-preview .wmde-markdown ul,
+.chat-markdown-preview .wmde-markdown ol {
+  margin: 0.35em 0;
+  padding-left: 1.25rem;
+}
+
+.chat-markdown-preview .wmde-markdown strong {
+  color: var(--color-foreground);
+  font-weight: 600;
+}

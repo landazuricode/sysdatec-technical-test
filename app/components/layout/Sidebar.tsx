@@ -16,6 +16,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
+  Bot,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
@@ -37,6 +38,7 @@ const ticketLinks = [
   { to: "/", label: "Panel", icon: LayoutDashboard, end: true },
   { to: "/tickets/new", label: "Nuevo ticket", icon: Ticket, end: false },
   { to: "/reports", label: "Reportes", icon: BarChart3, end: false },
+  { to: "/chat", label: "Asistente IA", icon: Bot, end: false },
 ] as const;
 
 type SidebarProps = {

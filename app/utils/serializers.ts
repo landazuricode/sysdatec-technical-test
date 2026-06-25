@@ -1,4 +1,12 @@
-import type { Assignee, Comment, Ticket } from "~/types/schema";
+import type {
+  Assignee,
+  ChatToolCall,
+  ChatToolResult,
+  Comment,
+  Conversation,
+  Message,
+  Ticket,
+} from "~/types/schema";
 
 export type SerializedAssignee = Omit<Assignee, "createdAt"> & {
   createdAt: string;
@@ -46,5 +54,55 @@ export function serializeTicket(
     classifiedAt: ticket.classifiedAt?.toISOString() ?? null,
     assignee: ticket.assignee ? serializeAssignee(ticket.assignee) : null,
     comments: ticket.comments?.map(serializeComment),
+  };
+}
+
+export type SerializedMessage = Omit<
+  Message,
+  "createdAt" | "toolCalls" | "toolResults"
+> & {
+  createdAt: string;
+  toolCalls: ChatToolCall[] | null;
+  toolResults: ChatToolResult[] | null;
+};
+
+export type SerializedConversation = Omit<
+  Conversation,
+  "createdAt" | "updatedAt" | "messages"
+> & {
+  createdAt: string;
+  updatedAt: string;
+  messages?: SerializedMessage[];
+};
+
+// Serializar mensaje del chat para la UI
+export function serializeMessage(
+  message: Message & {
+    toolCalls?: unknown;
+    toolResults?: unknown;
+  },
+): SerializedMessage {
+  return {
+    id: message.id,
+    conversationId: message.conversationId,
+    role: message.role,
+    content: message.content,
+    toolCalls: (message.toolCalls as ChatToolCall[] | null) ?? null,
+    toolResults: (message.toolResults as ChatToolResult[] | null) ?? null,
+    createdAt: message.createdAt.toISOString(),
+  };
+}
+
+// Serializar conversación para la UI
+export function serializeConversation(
+  conversation: Conversation & { messages?: Message[] },
+): SerializedConversation {
+  return {
+    id: conversation.id,
+    title: conversation.title,
+    userName: conversation.userName,
+    createdAt: conversation.createdAt.toISOString(),
+    updatedAt: conversation.updatedAt.toISOString(),
+    messages: conversation.messages?.map(serializeMessage),
   };
 }
